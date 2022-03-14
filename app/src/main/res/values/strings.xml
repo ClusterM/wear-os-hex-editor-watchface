@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Hex Editor</string>
+    <string name="title_activity_settings">SettingsActivity</string>
+
+    <string name="pref_today_step_start">today_step_start</string>
+    <string name="pref_steps_day">steps_day</string>
+</resources>

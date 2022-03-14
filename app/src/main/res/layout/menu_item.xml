@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settingsContainer"
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:orientation="horizontal"
+    android:layout_marginLeft="5dp"
+    android:layout_marginRight="5dp">
+
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="20dp"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            app:srcCompat="@drawable/menu_background_left" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:background="@drawable/menu_background_center"
+            android:gravity="center">
+
+                <TextView
+                    android:id="@+id/textViewSettingKey"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="key"
+                    android:textSize="18sp"/>
+
+                <TextView
+                    android:id="@+id/textViewSettingValue"
+                    android:layout_width="50dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="value"
+                    android:textSize="12sp"
+                    android:paddingLeft="10dp"
+                    android:visibility="visible"/>
+
+                <Switch
+                    android:id="@+id/switchSettingValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:enabled="true"
+                    android:checked="true"/>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/imageView2"
+            android:layout_width="20dp"
+            android:layout_height="70dp"
+            android:scaleType="fitXY"
+            app:srcCompat="@drawable/menu_background_right" />
+</LinearLayout>

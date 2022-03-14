@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdk 32
+
+    defaultConfig {
+        applicationId "com.clusterrr.hexeditorwatchface"
+        minSdk 30
+        targetSdk 32
+        versionCode 1
+        versionName "1.0"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    packagingOptions {
+        // pickFirst "META-INF/DEPENDENCIES"
+        exclude "META-INF/DEPENDENCIES"
+    }
+}
+
+dependencies {
+
+    implementation 'com.google.android.gms:play-services-wearable:17.1.0'
+    implementation 'androidx.percentlayout:percentlayout:1.0.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'com.google.android.support:wearable:2.8.1'
+    implementation 'com.google.android.gms:play-services-base:17.6.0'
+    implementation 'androidx.palette:palette:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'androidx.preference:preference:1.1.1'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.wear:wear:1.2.0'
+    implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.7.1'
+    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'com.google.android.gms:play-services-location:19.0.1'
+    implementation 'com.google.guava:guava:27.0.1-android'
+    compileOnly 'com.google.android.wearable:wearable:2.8.1'
+}
