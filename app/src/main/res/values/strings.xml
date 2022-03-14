@@ -4,4 +4,13 @@
 
     <string name="pref_today_step_start">today_step_start</string>
     <string name="pref_steps_day">steps_day</string>
+    <string name="pref_time_format">time_format</string>
+    <string name="pref_time_system">time_system</string>
+    <string name="pref_date">date</string>
+    <string name="pref_day_week">day_week</string>
+    <string name="pref_heart_rate">heart_rate</string>
+    <string name="pref_steps">steps</string>
+    <string name="pref_battery">battery</string>
+    <string name="pref_endianness">endianness</string>
+    <string name="pref_vignetting">vignetting</string>
 </resources>

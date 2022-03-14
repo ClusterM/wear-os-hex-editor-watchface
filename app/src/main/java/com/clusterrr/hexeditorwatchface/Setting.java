@@ -17,6 +17,7 @@ public class Setting {
         mDefaultValue = defaultValue;
     }
 
+    public String getName() { return mName; }
     public String[] getValueNames() { return mValueNames.clone(); }
     public String getValueName(int i) { return mValueNames[i]; }
     public int getValueCount() { return mValueNames.length; }

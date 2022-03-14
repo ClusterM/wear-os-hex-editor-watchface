@@ -33,13 +33,13 @@
 
                 <TextView
                     android:id="@+id/textViewSettingValue"
-                    android:layout_width="50dp"
+                    android:layout_width="70dp"
                     android:layout_height="wrap_content"
                     android:gravity="center"
+                    android:paddingLeft="10dp"
                     android:text="value"
                     android:textSize="12sp"
-                    android:paddingLeft="10dp"
-                    android:visibility="visible"/>
+                    android:visibility="visible" />
 
                 <Switch
                     android:id="@+id/switchSettingValue"

@@ -4,6 +4,7 @@ import static com.clusterrr.hexeditorwatchface.HexWatchFace.TAG;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,6 +23,8 @@ import androidx.recyclerview.widget.RecyclerView;
 public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapter.RecyclerViewHolder> {
     //private ArrayList<MenuItem> dataSource = new ArrayList<MenuItem>();
 
+    private Setting[] mSettings;
+
     public interface AdapterCallback {
         void onItemClicked(Integer menuPosition);
     }
@@ -35,6 +38,20 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
 
     public SettingsMenuAdapter(AppCompatActivity context /*, ArrayList<MenuItem> dataArgs, AdapterCallback callback*/) {
         this.context = context;
+        SharedPreferences prefs = context.getPreferences(Context.MODE_PRIVATE);
+        mSettings = new Setting[] {
+                new Setting(prefs, "Time format", new String[] {"12 hours", "24 hours"}, context.getString(R.string.pref_time_format), 1),
+                new Setting(prefs, "Time system", new String[] {"Dec", "Hex", "Hex, dec on tap"}, context.getString(R.string.pref_time_system), 2),
+                new Setting(prefs, "Date", new String[] {"Do not show", "Dec", "Hex, dec on tap"}, context.getString(R.string.pref_date), 0),
+                new Setting(prefs, "Day of the week", new String[] {"Do not show", "Sunday = 0", "Sunday = 7"}, context.getString(R.string.pref_day_week), 0),
+                new Setting(prefs, "Heart rate", new String[] {"Do not show", "Dec", "Hex, dec on tap"}, context.getString(R.string.pref_heart_rate), 0),
+                new Setting(prefs, "Steps", new String[] {"Do not show", "Dec", "Hex, dec on tap"}, context.getString(R.string.pref_steps), 0),
+                new Setting(prefs, "Battery", new String[] {"Do not show", "Dec (0-100)", 
+                        "Hex (0x00-0xFF)", "Hex (0-100)", "Hex (0x00-0xFF), dec on tap", "Hex (0-100), dec on tap"},
+                        context.getString(R.string.pref_battery), 0),
+                new Setting(prefs, "Endianness", new String[] {"Little endian", "Big endian"}, context.getString(R.string.pref_endianness), 0),
+                new Setting(prefs, "Round vignetting", new String[] {"Disabled", "Enabled>"}, context.getString(R.string.pref_vignetting), 0),
+        };
 //        this.dataSource = dataArgs;
 //        this.callback = callback;
         requestPermissionLauncherLocation = context.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -100,105 +117,20 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
             menuContainer = view.findViewById(R.id.settingsContainer);
             menuItemSettingKey = view.findViewById(R.id.textViewSettingKey);
             menuItemSettingValue = view.findViewById(R.id.textViewSettingValue);
-//            menuItem = view.findViewById(R.id.textView);
-//            menuIcon = view.findViewById(R.id.menu_icon);
         }
     }
 
     @Override
     public void onBindViewHolder(@NonNull SettingsMenuAdapter.RecyclerViewHolder holder, int position) {
-        switch (position){
-            case 0:
-                holder.menuItemSettingKey.setText("Time format");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                holder.menuContainer.setOnClickListener(v -> {
-                    /*
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        Log.d(TAG, "ACCESS_BACKGROUND_LOCATION request required");
-                        requestPermissionLauncherLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-                    } else {
-                        Log.d(TAG, "ACCESS_BACKGROUND_LOCATION request not required");
-                    }
-                     */
-                    requestPermissionLauncherLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-                });
-                break;
-            case 1:
-                holder.menuItemSettingKey.setText("Time numeral system");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                holder.menuContainer.setOnClickListener(v -> {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.BODY_SENSORS)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        Log.d(TAG, "BODY_SENSORS request required");
-                        requestPermissionLauncherBody.launch(Manifest.permission.BODY_SENSORS);
-                    } else {
-                        Log.d(TAG, "BODY_SENSORS request not required");
-                    }
-                });
-                break;
-            case 2:
-                holder.menuItemSettingKey.setText("Date on the left");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                holder.menuContainer.setOnClickListener(v -> {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        Log.d(TAG, "ACTIVITY_RECOGNITION request required");
-                        requestPermissionLauncherSteps.launch(Manifest.permission.ACTIVITY_RECOGNITION);
-                    } else {
-                        Log.d(TAG, "ACTIVITY_RECOGNITION request not required");
-                    }
-                });
-                break;
-            case 3:
-                holder.menuItemSettingKey.setText("Show heartrate");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                break;
-            case 4:
-                holder.menuItemSettingKey.setText("Show steps");
-                holder.menuItemSettingValue.setText("Little endian");
-                break;
-            case 5:
-                holder.menuItemSettingKey.setText("Show temperate");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                break;
-            case 6:
-                holder.menuItemSettingKey.setText("Show temperate");
-                holder.menuItemSettingValue.setText("Dec on tap");
-                break;
-        }
+        holder.menuItemSettingKey.setText(mSettings[position].getName());
+        holder.menuItemSettingValue.setText(mSettings[position].getValueName());
+        holder.menuContainer.setOnClickListener(v -> {
 
-        //MenuItem data_provider = dataSource.get(position);
-
-        //holder.menuItem.setText("TEST");
-        //holder.menuIcon.setImageResource(data_provider.getImage());
-
-
+        });
     }
 
     @Override
     public int getItemCount() {
-        //return dataSource.size();
-        return 7;
+        return mSettings.length;
     }
 }
-/*
-class MenuItem {
-    private String text;
-    private int image;
-
-    public MenuItem(int image, String text) {
-        this.image = image;
-        this.text = text;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public int getImage() {
-        return image;
-    }
-}
-
- */
