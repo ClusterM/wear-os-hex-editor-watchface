@@ -211,7 +211,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             .apply();
                     todayStepStart = mStepCounter;
                 }
-                todaySteps = mStepCounter - todayStepStart;
+                todaySteps = Math.max(mStepCounter - todayStepStart, 0);
             }
 
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);

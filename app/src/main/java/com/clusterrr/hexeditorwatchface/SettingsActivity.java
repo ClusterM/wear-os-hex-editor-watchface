@@ -109,6 +109,7 @@ public class SettingsActivity extends AppCompatActivity {
         Resources res = getResources();
 
         mSettings = new Setting[] {
+                // TODO: move strings to resources
                 new Setting(prefs, "Time format", new String[] {"12 hours", "24 hours"}, getString(R.string.pref_time_format), PREF_DEFAULT_TIME_FORMAT),
                 new Setting(prefs, "Time system", new String[] {"Dec", "Hex", "Hex, dec on tap"}, getString(R.string.pref_time_system), PREF_DEFAULT_TIME_SYSTEM),
                 new Setting(prefs, "Date", new String[] {"Do not show", "Dec", "Hex", "Hex, dec on tap"}, getString(R.string.pref_date), PREF_DEFAULT_DATE),

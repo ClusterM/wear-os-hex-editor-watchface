@@ -63,7 +63,6 @@ public class SettingsSubMenuAdapter extends RecyclerView.Adapter<SettingsSubMenu
         holder.menuItemSettingKey.setText(mValues[pos]);
         holder.menuItemSettingRadio.setChecked(pos == mSelected);
         holder.menuItemSettingRadio.setOnCheckedChangeListener((v, b) -> {
-            //this.mHolders[pos].menuItemSettingRadio.setChecked(true);
             if (b) {
                 Intent result = new Intent();
                 result.putExtra("setting", mSetting);

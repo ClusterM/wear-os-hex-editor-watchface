@@ -27,14 +27,10 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
         this.mContext = context;
         mSettings = settings;
         this.mHolders = new SettingsMenuAdapter.RecyclerViewHolder[settings.length];
-
-//        this.dataSource = dataArgs;
-//        this.callback = callback;
     }
 
     public void updateHolder(int pos)
     {
-        SharedPreferences prefs = mContext.getSharedPreferences(mContext.getString(R.string.app_name), Context.MODE_PRIVATE);
         Resources res = mContext.getResources();
         SettingsMenuAdapter.RecyclerViewHolder holder = mHolders[pos];
         holder.menuItemSettingKey.setText(mSettings[pos].getName());
