@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <bool name="is_round">false</bool>
     <integer name="default_vignetting">0</integer>
 </resources>

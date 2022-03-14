@@ -5,6 +5,7 @@ import static com.clusterrr.hexeditorwatchface.HexWatchFace.TAG;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,8 +14,6 @@ import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,10 +21,6 @@ import androidx.recyclerview.widget.RecyclerView;
 public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapter.RecyclerViewHolder> {
     private Setting[] mSettings;
     private AppCompatActivity mContext;
-    private ActivityResultLauncher<String> requestPermissionLauncherLocation;
-    private ActivityResultLauncher<String> requestPermissionLauncherBody;
-    private ActivityResultLauncher<String> requestPermissionLauncherSteps;
-    private View.OnClickListener onClickListener;
     private SettingsMenuAdapter.RecyclerViewHolder[] mHolders;
 
     public SettingsMenuAdapter(AppCompatActivity context, Setting[] settings) {
@@ -35,52 +30,12 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
 
 //        this.dataSource = dataArgs;
 //        this.callback = callback;
-        requestPermissionLauncherLocation = context.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                // Permission is granted. Continue the action or workflow in your
-                // app.
-                Log.d(TAG, "ACCESS_BACKGROUND_LOCATION granted");
-            } else {
-                // Explain to the user that the feature is unavailable because the
-                // features requires a permission that the user has denied. At the
-                // same time, respect the user's decision. Don't link to system
-                // settings in an effort to convince the user to change their
-                // decision.
-                Log.d(TAG, "ACCESS_BACKGROUND_LOCATION not granted");
-            }
-        });
-        requestPermissionLauncherBody = context.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                // Permission is granted. Continue the action or workflow in your
-                // app.
-                Log.d(TAG, "BODY_SENSORS granted");
-            } else {
-                // Explain to the user that the feature is unavailable because the
-                // features requires a permission that the user has denied. At the
-                // same time, respect the user's decision. Don't link to system
-                // settings in an effort to convince the user to change their
-                // decision.
-                Log.d(TAG, "BODY_SENSORS not granted");
-            }
-        });
-        requestPermissionLauncherSteps  = context.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                // Permission is granted. Continue the action or workflow in your
-                // app.
-                Log.d(TAG, "ACTIVITY_RECOGNITION granted");
-            } else {
-                // Explain to the user that the feature is unavailable because the
-                // features requires a permission that the user has denied. At the
-                // same time, respect the user's decision. Don't link to system
-                // settings in an effort to convince the user to change their
-                // decision.
-                Log.d(TAG, "ACTIVITY_RECOGNITION not granted");
-            }
-        });
     }
 
     public void updateHolder(int pos)
     {
+        SharedPreferences prefs = mContext.getSharedPreferences(mContext.getString(R.string.app_name), Context.MODE_PRIVATE);
+        Resources res = mContext.getResources();
         SettingsMenuAdapter.RecyclerViewHolder holder = mHolders[pos];
         holder.menuItemSettingKey.setText(mSettings[pos].getName());
         holder.menuItemSettingValue.setText(mSettings[pos].getValueName());
@@ -91,6 +46,10 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
             intent.putExtra("selected", mSettings[pos].getValue());
             mContext.startActivityForResult(intent, 0);
         });
+        // Disable vignetting for rectangular screens
+        holder.menuContainer.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
+        holder.menuItemSettingKey.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
+        holder.menuItemSettingValue.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
     }
 
     @NonNull

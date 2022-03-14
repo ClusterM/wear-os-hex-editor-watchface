@@ -45,9 +45,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
 
-    private static final int PREF_TIME_FORMAT_12 = 0;
-    private static final int PREF_TIME_FORMAT_24 = 1;
-
     /**
      * Handler message id for updating the time periodically in interactive mode.
      */
@@ -211,7 +208,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 drawNumber(canvas, todaySteps, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
 
                 drawNumber(canvas, mCalendar.get(
-                        prefs.getInt(res.getString(R.string.pref_time_format),PREF_TIME_FORMAT_24) == PREF_TIME_FORMAT_12
+                        prefs.getInt(res.getString(R.string.pref_time_format), SettingsActivity.PREF_TIME_FORMAT_24)
+                                == SettingsActivity.PREF_TIME_FORMAT_12
                         ? Calendar.HOUR
                         : Calendar.HOUR_OF_DAY
                 ), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_WHITE, 0, 0);

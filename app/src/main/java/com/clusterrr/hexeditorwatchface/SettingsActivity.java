@@ -1,29 +1,62 @@
 package com.clusterrr.hexeditorwatchface;
 
+import static com.clusterrr.hexeditorwatchface.HexWatchFace.TAG;
+
 import android.Manifest;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.preference.PreferenceFragmentCompat;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
 import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
 public class SettingsActivity extends AppCompatActivity {
+    public static final int PREF_KEY_TIME_FORMAT = 0;
+    public static final int PREF_KEY_TIME_SYSTEM = 1;
+    public static final int PREF_KEY_DATE = 2;
+    public static final int PREF_KEY_DAY_OF_THE_WEEK = 3;
+    public static final int PREF_KEY_HEART_RATE= 4;
+    public static final int PREF_KEY_STEPS = 5;
+    public static final int PREF_KEY_BATTERY = 6;
+    public static final int PREF_KEY_ENDIANNESS = 7;
+    public static final int PREF_KEY_VIGNETTING = 8;
+
+    public static final int PREF_VALUE_NOT_SHOW = 0;
+
+    public static final int PREF_TIME_FORMAT_12 = 0;
+    public static final int PREF_TIME_FORMAT_24 = 1;
+
     private Setting[] mSettings;
-    SettingsMenuAdapter settingsMenuAdapter;
+    SettingsMenuAdapter mSettingsMenuAdapter;
+
+    private ActivityResultLauncher<String> requestPermissionLauncherBody
+            = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+        if (isGranted) {
+            Log.i(TAG, "BODY_SENSORS granted");
+        } else {
+            // Rollback
+            Log.i(TAG, "BODY_SENSORS not granted");
+            mSettings[PREF_KEY_HEART_RATE].setValue(PREF_VALUE_NOT_SHOW);
+            mSettingsMenuAdapter.updateHolder(PREF_KEY_HEART_RATE);
+        }
+    });
+    private ActivityResultLauncher<String> requestPermissionActivity
+            = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+        if (isGranted) {
+            Log.d(TAG, "ACTIVITY_RECOGNITION granted");
+        } else {
+            Log.d(TAG, "ACTIVITY_RECOGNITION not granted");
+            mSettings[PREF_KEY_STEPS].setValue(PREF_VALUE_NOT_SHOW);
+            mSettingsMenuAdapter.updateHolder(PREF_KEY_STEPS);
+        }
+    });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +84,8 @@ public class SettingsActivity extends AppCompatActivity {
                 new CustomScrollingLayoutCallback();
         recyclerView.setLayoutManager(
                 new WearableLinearLayoutManager(this, customScrollingLayoutCallback));
-        settingsMenuAdapter = new SettingsMenuAdapter(this, mSettings);
-        recyclerView.setAdapter(settingsMenuAdapter);
+        mSettingsMenuAdapter = new SettingsMenuAdapter(this, mSettings);
+        recyclerView.setAdapter(mSettingsMenuAdapter);
     }
 
     @Override
@@ -63,8 +96,30 @@ public class SettingsActivity extends AppCompatActivity {
         int setting = data.getIntExtra("setting", -1);
         int selected = data.getIntExtra("selected", -1);
         Log.d(HexWatchFace.TAG, "Setting " + setting + " set to " + selected);
+
+        switch (setting) {
+            case PREF_KEY_HEART_RATE:
+                if (selected != PREF_VALUE_NOT_SHOW) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "BODY_SENSORS request required");
+                        requestPermissionLauncherBody.launch(Manifest.permission.BODY_SENSORS);
+                    }
+                }
+                break;
+            case PREF_KEY_STEPS:
+                if (selected != PREF_VALUE_NOT_SHOW) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "ACTIVITY_RECOGNITION request required");
+                        requestPermissionLauncherBody.launch(Manifest.permission.ACTIVITY_RECOGNITION);
+                    }
+                }
+                break;
+        }
+
         mSettings[setting].setValue(selected);
-        settingsMenuAdapter.updateHolder(setting);
+        mSettingsMenuAdapter.updateHolder(setting);
     }
 }
 
