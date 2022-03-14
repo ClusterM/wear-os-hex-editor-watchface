@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="MyMaterialTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="circle_radius_percent">30%</item>
-<!--        <item name="android:paddingTop">40dp</item>-->
-    </style>
+
 </resources>
