@@ -48,7 +48,6 @@
 
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
-
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
         </service>
@@ -56,7 +55,8 @@
         <activity
             android:name=".SettingsActivity"
             android:label="Settings"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/MyMaterialTheme">
 
             <intent-filter>
                 <action android:name="androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR" />
