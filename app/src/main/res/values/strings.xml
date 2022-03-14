@@ -12,5 +12,8 @@
     <string name="pref_steps">steps</string>
     <string name="pref_battery">battery</string>
     <string name="pref_endianness">endianness</string>
+    <string name="pref_background">background</string>
+    <string name="pref_background_redraw">background_redraw</string>
+    <string name="pref_bars">bars</string>
     <string name="pref_vignetting">vignetting</string>
 </resources>

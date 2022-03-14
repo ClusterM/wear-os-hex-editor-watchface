@@ -1,10 +1,16 @@
 package com.clusterrr.hexeditorwatchface;
 
+import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM;
+import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM_ONCE;
+import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_ZEROS;
+
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,6 +31,8 @@ import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
+import androidx.core.content.ContextCompat;
+
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -41,6 +49,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
+    private static final int BACKGROUND_OFFSET = -54;
     private static final int ENDIANNESS_LITTLE_ENDIAN = 0;
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
@@ -88,11 +97,16 @@ public class HexWatchFace extends CanvasWatchFaceService {
         private HexNumbers mNumbers;
         private int mHeartRate = 0;
         private long mHeartRateTS = 0;
-        private int mStepCounter = 0;
+        private int mStepCounter = -1;
         private long mTouchTS = 0;
         private SensorManager mSensorManager = null;
         private Sensor mHeartRateSensor = null;
         private Sensor mStepCountSensor = null;
+        private int mBackgroundMinX = 0;
+        private int mBackgroundMinY = 0;
+        private int mBackgroundMaxX = 0;
+        private int mBackgroundMaxY = 0;
+        private int[] mBackground;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -109,10 +123,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
             mBarsBitmap = BitmapFactory.decodeResource(res, R.drawable.bars);
             mNumbers = new HexNumbers(res);
             mSensorManager = ((SensorManager)getSystemService(SENSOR_SERVICE));
-            mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-            mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-            mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
-            mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
 
         @Override
@@ -160,77 +170,229 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
+            Context context = getApplicationContext();
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
             Resources res = getApplicationContext().getResources();
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
-            if ((mHeartRateTS + MAX_HEART_RATE_AGE < now) && (mHeartRate != 0)) {
-                mHeartRate = 0;
-                Log.d(TAG, "Heart rate is reset to 0");
+
+            if (mBackgroundMinX == 0) mBackgroundMinX = -canvas.getWidth() / 2 / NUMBER_WIDTH;
+            if (mBackgroundMaxX == 0) mBackgroundMaxX = canvas.getWidth() / 2 / NUMBER_WIDTH + 1;
+            if (mBackgroundMinY == 0) mBackgroundMinY = -canvas.getWidth() / 2 / NUMBER_V_INTERVAL;
+            if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 1;
+
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
+                if (mHeartRateSensor == null) {
+                    mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
+                    mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                }
+                if ((mHeartRateTS + MAX_HEART_RATE_AGE < now) && (mHeartRate != 0)) {
+                    mHeartRate = 0;
+                    Log.d(TAG, "Heart rate is reset to 0");
+                }
             }
+
+            int todayStepStart = 0;
+            int todaySteps = 0;
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+                if (mStepCountSensor == null) {
+                    mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+                    mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                }
+
+                todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
+                if (mStepCounter >= 0 && (
+                        (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
+                        || (mStepCounter < todayStepStart))
+                    ) {
+                    prefs.edit()
+                            .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
+                            .putInt(getString(R.string.pref_today_step_start), mStepCounter)
+                            .apply();
+                    todayStepStart = mStepCounter;
+                }
+                todaySteps = mStepCounter - todayStepStart;
+            }
+
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             Intent batteryIntent = getApplicationContext().registerReceiver(null, filter);
-            int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
 
-            int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
-            if (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0)
-                || mStepCounter < todayStepStart) {
-                    prefs.edit()
-                        .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
-                        .putInt(getString(R.string.pref_today_step_start), mStepCounter)
-                        .apply();
-                    todayStepStart = mStepCounter;
+            boolean tapped = mTouchTS + TOUCH_TIME >= now;
+
+            int endianness =
+                    (prefs.getInt(getString(R.string.pref_endianness), SettingsActivity.PREF_DEFAULT_ENDIANNESS)
+                    == SettingsActivity.PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN)
+                        ? ENDIANNESS_LITTLE_ENDIAN
+                        : ENDIANNESS_BIG_ENDIAN;
+
+            int hour;
+            if (prefs.getInt(getString(R.string.pref_time_format), SettingsActivity.PREF_DEFAULT_TIME_FORMAT)
+                    == SettingsActivity.PREF_TIME_FORMAT_12)
+                hour = mCalendar.get(Calendar.HOUR);
+            else
+                hour = mCalendar.get(Calendar.HOUR_OF_DAY);
+            int timeSystem = prefs.getInt(getString(R.string.pref_time_system), SettingsActivity.PREF_DEFAULT_TIME_SYSTEM);
+            int timeEndianness;
+            switch (timeSystem) {
+                default:
+                case SettingsActivity.PREF_VALUE_TIME_DEC:
+                    timeEndianness = ENDIANNESS_FAKE_HEX;
+                    break;
+                case SettingsActivity.PREF_VALUE_TIME_HEX:
+                    timeEndianness = ENDIANNESS_LITTLE_ENDIAN;
+                    break;
+                case SettingsActivity.PREF_VALUE_TIME_DEC_ON_TAP:
+                    timeEndianness = tapped ? ENDIANNESS_FAKE_HEX : ENDIANNESS_LITTLE_ENDIAN;
+                    break;
             }
-            int todaySteps = mStepCounter - todayStepStart;
-
-            boolean touched = mTouchTS + TOUCH_TIME >= now;
 
             if (!mAmbient) {
                 canvas.drawBitmap(mBackgroundBitmap,
                         canvas.getWidth() / 2 - mBackgroundBitmap.getWidth() / 2,
-                        canvas.getHeight() / 2 - mBackgroundBitmap.getHeight() / 2 - 54,
+                        canvas.getHeight() / 2 - mBackgroundBitmap.getHeight() / 2 + BACKGROUND_OFFSET,
                         null);
 
-
-                for (int i = -5; i < 5; i++) {
-                    for (int j = -5; j < 5; j++) {
-                        drawNumberAtPos(canvas, (int) (Math.random() * 256), HexNumbers.COLORS_CYAN, i, j);
+                int backgroundMode = prefs.getInt(getString(R.string.pref_background), SettingsActivity.PREF_DEFAULT_BACKGROUND);
+                if (mBackground == null || prefs.getBoolean(getString(R.string.pref_background_redraw), false)) {
+                    mBackground = new int[(mBackgroundMaxX - mBackgroundMinX + 1) * (mBackgroundMaxY - mBackgroundMinY + 1)];
+                    switch (backgroundMode) {
+                        case PREF_VALUE_BACKGROUND_RANDOM_ONCE:
+                            for (int i = 0; i < mBackground.length; i++)
+                                mBackground[i] = (int) (Math.random() * 256);
+                            break;
+                        case PREF_VALUE_BACKGROUND_ZEROS:
+                            for (int i = 0; i < mBackground.length; i++)
+                                mBackground[i] = 0;
+                            break;
+                    }
+                    prefs.edit().putBoolean(getString(R.string.pref_background_redraw), false).apply();
+                }
+                if (backgroundMode == PREF_VALUE_BACKGROUND_RANDOM) {
+                        for (int i = 0; i < mBackground.length; i++)
+                            mBackground[i] = (int) (Math.random() * 256);
+                }
+                int p = 0;
+                for (int x = mBackgroundMinX; x <= mBackgroundMaxX; x++) {
+                    for (int y = mBackgroundMinY; y < mBackgroundMaxY; y++) {
+                        drawNumberAtPos(canvas, mBackground[p++], HexNumbers.COLORS_CYAN, x, y);
                     }
                 }
 
-                drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_MONTH), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 2, -1);
-                drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_WEEK) - 1, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
-                drawNumber(canvas, mCalendar.get(Calendar.MONTH) + 1, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 2, 1);
-                drawNumber(canvas, mCalendar.get(Calendar.YEAR), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, -1);
+                drawNumber(canvas, hour, timeEndianness, 1, HexNumbers.COLORS_WHITE, 0, 0);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeEndianness, 1,HexNumbers.COLORS_WHITE, 1, 0);
+                drawNumber(canvas, mCalendar.get(Calendar.SECOND), timeEndianness, 1,HexNumbers.COLORS_CYAN, 2, 0);
 
-                drawNumber(canvas, mHeartRate, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -1, -1);
-                drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
-                drawNumber(canvas, todaySteps, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
+                int dateSystem = prefs.getInt(getString(R.string.pref_date), SettingsActivity.PREF_DEFAULT_DATE);
+                if (dateSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                    int dateEndianness;
+                    if (dateSystem  == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
+                        dateSystem = tapped
+                                ? SettingsActivity.PREF_VALUE_COMMON_DEC
+                                : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                    switch (dateSystem) {
+                        default:
+                        case SettingsActivity.PREF_VALUE_COMMON_DEC:
+                            dateEndianness = ENDIANNESS_FAKE_HEX;
+                            break;
+                        case SettingsActivity.PREF_VALUE_COMMON_HEX:
+                            dateEndianness = ENDIANNESS_LITTLE_ENDIAN;
+                            break;
+                    }
+                    drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_MONTH), dateEndianness, 1, HexNumbers.COLORS_CYAN, 2, -1);
+                    drawNumber(canvas, mCalendar.get(Calendar.MONTH) + 1, dateEndianness, 1, HexNumbers.COLORS_CYAN, 2, 1);
+                    drawNumber(canvas, mCalendar.get(Calendar.YEAR), dateEndianness, 1, HexNumbers.COLORS_CYAN, 1, -1);
+                }
 
-                drawNumber(canvas, mCalendar.get(
-                        prefs.getInt(res.getString(R.string.pref_time_format), SettingsActivity.PREF_TIME_FORMAT_24)
-                                == SettingsActivity.PREF_TIME_FORMAT_12
-                        ? Calendar.HOUR
-                        : Calendar.HOUR_OF_DAY
-                ), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_WHITE, 0, 0);
-//                drawNumber(canvas, 0x1E, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_WHITE, 0, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), ENDIANNESS_FAKE_HEX, 1,HexNumbers.COLORS_WHITE, 1, 0);
-//                drawNumber(canvas, 0xE7, ENDIANNESS_LITTLE_ENDIAN, 1,HexNumbers.COLORS_WHITE, 1, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.SECOND), ENDIANNESS_FAKE_HEX, 1,HexNumbers.COLORS_CYAN, 2, 0);
+                int dayOfTheWeekMode = prefs.getInt(getString(R.string.pref_day_week), SettingsActivity.PREF_DEFAULT_DAY_OF_THE_WEEK);
+                if (dayOfTheWeekMode != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                    int dayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK) - 1;
+                            if ((dayOfTheWeek == 0) && (dayOfTheWeekMode == SettingsActivity.PREF_VALUE_DAY_SUNDAY_7)) dayOfTheWeek = 7;
+                    drawNumber(canvas, dayOfTheWeek, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
+                }
 
-                canvas.drawBitmap(mBarsBitmap,
-                        canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
-                        canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 - 54,
-                        null);
-                canvas.drawBitmap(mVignettingBitmap,
-                        new Rect(0, 0, mVignettingBitmap.getWidth(), mVignettingBitmap.getHeight()),
-                        new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
-                        null);
+                int heartRateSystem = prefs.getInt(getString(R.string.pref_heart_rate), SettingsActivity.PREF_DEFAULT_HEART_RATE);
+                if (heartRateSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                    if (heartRateSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
+                        heartRateSystem = tapped
+                                ? SettingsActivity.PREF_VALUE_COMMON_DEC
+                                : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                    switch (heartRateSystem) {
+                        default:
+                        case SettingsActivity.PREF_VALUE_COMMON_DEC:
+                            drawNumber(canvas, mHeartRate, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -1, -1);
+                            break;
+                        case SettingsActivity.PREF_VALUE_COMMON_HEX:
+                            drawNumber(canvas, mHeartRate, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_CYAN, -1, -1);
+                            break;
+                    }
+                }
 
+                int batterySystem = prefs.getInt(getString(R.string.pref_battery), SettingsActivity.PREF_DEFAULT_BATTERY);
+                if (batterySystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                    switch(batterySystem) {
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF_TAP:
+                            batterySystem = tapped
+                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
+                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF;
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64_TAP:
+                            batterySystem = tapped
+                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
+                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64;
+                            break;
+                    }
+                    switch (batterySystem) {
+                        default:
+                        case SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100:
+                            drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64:
+                            drawNumber(canvas, battery, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF:
+                            drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            break;
+                    }
+                }
+
+                int stepsSystem = prefs.getInt(getString(R.string.pref_steps), SettingsActivity.PREF_DEFAULT_STEPS);
+                if (stepsSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                    if (stepsSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
+                        stepsSystem = tapped
+                                ? SettingsActivity.PREF_VALUE_COMMON_DEC
+                                : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                    switch (stepsSystem) {
+                        default:
+                        case SettingsActivity.PREF_VALUE_COMMON_DEC:
+                            Log.d(TAG, "Steps total: "+mStepCounter+", steps today: " + todaySteps +", today start: " + todayStepStart);
+                            drawNumber(canvas, todaySteps, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
+                            break;
+                        case SettingsActivity.PREF_VALUE_COMMON_HEX:
+                            drawNumber(canvas, todaySteps, endianness, 2, HexNumbers.COLORS_CYAN, -1, 1);
+                            break;
+                    }
+                }
+
+                if (prefs.getInt(getString(R.string.pref_bars), SettingsActivity.PREF_DEFAULT_BARS)
+                        == SettingsActivity.PREF_VALUE_BARS_SHOW) {
+                    canvas.drawBitmap(mBarsBitmap,
+                            canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
+                            canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_OFFSET,
+                            null);
+                }
+
+                if (prefs.getInt(getString(R.string.pref_vignetting), res.getInteger(R.integer.default_vignetting))
+                    == SettingsActivity.PREF_VALUE_VINGETTING_ENABLED) {
+                    canvas.drawBitmap(mVignettingBitmap,
+                            new Rect(0, 0, mVignettingBitmap.getWidth(), mVignettingBitmap.getHeight()),
+                            new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
+                            null);
+                }
             } else {
                 canvas.drawColor(Color.BLACK);
-                drawNumber(canvas, mCalendar.get(Calendar.HOUR_OF_DAY), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_DARK, 0, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), ENDIANNESS_FAKE_HEX, 1,HexNumbers.COLORS_DARK, 1, 0);
+                drawNumber(canvas, hour, timeEndianness, 1, HexNumbers.COLORS_DARK, 0, 0);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeEndianness, 1,HexNumbers.COLORS_DARK, 1, 0);
             }
         }
 
