@@ -72,13 +72,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
         @Override
         public void handleMessage(Message msg) {
             HexWatchFace.Engine engine = mWeakReference.get();
-            if (engine != null) {
-                switch (msg.what) {
-                    case MSG_UPDATE_TIME:
-                        engine.handleUpdateTimeMessage();
-                        break;
-                }
-            }
+            if (engine != null) engine.handleUpdateTimeMessage();
         }
     }
 
@@ -196,7 +190,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     preferences.edit()
                         .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
                         .putInt(getString(R.string.pref_today_step_start), mStepCounter)
-                        .commit();
+                        .apply();
                     todayStepStart = mStepCounter;
             }
             int todaySteps = mStepCounter - todayStepStart;
