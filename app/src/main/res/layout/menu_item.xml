@@ -29,25 +29,25 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="key"
-                    android:textSize="18sp"/>
+                    android:textSize="15dp"/>
 
                 <TextView
                     android:id="@+id/textViewSettingValue"
-                    android:layout_width="70dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:paddingLeft="10dp"
+                    android:paddingLeft="8dp"
                     android:text="value"
-                    android:textSize="12sp"
-                    android:visibility="visible" />
+                    android:textSize="12sp"/>
 
-                <Switch
-                    android:id="@+id/switchSettingValue"
+                <RadioButton
+                    android:id="@+id/radioButtonSettingValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:visibility="gone"
                     android:enabled="true"
-                    android:checked="true"/>
+                    android:checked="false"
+                    android:layout_marginLeft="10dp"
+                    android:visibility="gone"/>
         </LinearLayout>
 
         <ImageView

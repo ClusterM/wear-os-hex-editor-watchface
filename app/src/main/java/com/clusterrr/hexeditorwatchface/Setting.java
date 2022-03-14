@@ -21,7 +21,15 @@ public class Setting {
     public String[] getValueNames() { return mValueNames.clone(); }
     public String getValueName(int i) { return mValueNames[i]; }
     public int getValueCount() { return mValueNames.length; }
-    public String getValueName() { return mValueNames[mPrefs.getInt(mKey, mDefaultValue)]; }
-    public int getValue(int i) { return mPrefs.getInt(mKey, mDefaultValue); }
-    public void setValue(int i, int value) { mPrefs.edit().putInt(mKey, value).apply(); }
+    public String getValueName() {
+        try{
+            return mValueNames[mPrefs.getInt(mKey, mDefaultValue)];
+        }
+        catch (Exception ex) {
+            setValue(mDefaultValue);
+            return mValueNames[mDefaultValue];
+        }
+    }
+    public int getValue() { return mPrefs.getInt(mKey, mDefaultValue); }
+    public void setValue(int value) { mPrefs.edit().putInt(mKey, value).apply(); }
 }

@@ -45,6 +45,9 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
 
+    private static final int PREF_TIME_FORMAT_12 = 0;
+    private static final int PREF_TIME_FORMAT_24 = 1;
+
     /**
      * Handler message id for updating the time periodically in interactive mode.
      */
@@ -160,7 +163,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
-            SharedPreferences preferences = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+            Resources res = getApplicationContext().getResources();
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
             if ((mHeartRateTS + MAX_HEART_RATE_AGE < now) && (mHeartRate != 0)) {
@@ -171,10 +175,10 @@ public class HexWatchFace extends CanvasWatchFaceService {
             Intent batteryIntent = getApplicationContext().registerReceiver(null, filter);
             int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
 
-            int todayStepStart = preferences.getInt(getString(R.string.pref_today_step_start), 0);
-            if (mCalendar.get(Calendar.DAY_OF_MONTH) != preferences.getInt(getString(R.string.pref_steps_day), 0)
+            int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
+            if (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0)
                 || mStepCounter < todayStepStart) {
-                    preferences.edit()
+                    prefs.edit()
                         .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
                         .putInt(getString(R.string.pref_today_step_start), mStepCounter)
                         .apply();
@@ -206,7 +210,11 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
                 drawNumber(canvas, todaySteps, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
 
-                drawNumber(canvas, mCalendar.get(Calendar.HOUR_OF_DAY), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_WHITE, 0, 0);
+                drawNumber(canvas, mCalendar.get(
+                        prefs.getInt(res.getString(R.string.pref_time_format),PREF_TIME_FORMAT_24) == PREF_TIME_FORMAT_12
+                        ? Calendar.HOUR
+                        : Calendar.HOUR_OF_DAY
+                ), ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_WHITE, 0, 0);
 //                drawNumber(canvas, 0x1E, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_WHITE, 0, 0);
                 drawNumber(canvas, mCalendar.get(Calendar.MINUTE), ENDIANNESS_FAKE_HEX, 1,HexNumbers.COLORS_WHITE, 1, 0);
 //                drawNumber(canvas, 0xE7, ENDIANNESS_LITTLE_ENDIAN, 1,HexNumbers.COLORS_WHITE, 1, 0);

@@ -65,7 +65,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
+        <activity
+            android:name=".SettingsSubActivity"
+            android:label="Settings"
+            android:theme="@style/MyMaterialTheme">
+        </activity>
 
         <meta-data
             android:name="com.google.android.gms.version"
