@@ -126,11 +126,16 @@ public class SettingsActivity extends AppCompatActivity {
         };
 
         WearableRecyclerView recyclerView = findViewById(R.id.settings_menu_view);
-        recyclerView.setEdgeItemsCenteringEnabled(true);
-        CustomScrollingLayoutCallback customScrollingLayoutCallback =
-                new CustomScrollingLayoutCallback();
-        recyclerView.setLayoutManager(
-                new WearableLinearLayoutManager(this, customScrollingLayoutCallback));
+        if (res.getBoolean(R.bool.is_round)) {
+            recyclerView.setEdgeItemsCenteringEnabled(true);
+            CustomScrollingLayoutCallback customScrollingLayoutCallback =
+                    new CustomScrollingLayoutCallback();
+            recyclerView.setLayoutManager(
+                    new WearableLinearLayoutManager(this, customScrollingLayoutCallback));
+        } else {
+            recyclerView.setLayoutManager(
+                    new WearableLinearLayoutManager(this));
+        }
         mSettingsMenuAdapter = new SettingsMenuAdapter(this, mSettings);
         recyclerView.setAdapter(mSettingsMenuAdapter);
     }

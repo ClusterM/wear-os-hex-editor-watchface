@@ -19,14 +19,16 @@ public class SettingsSubActivity extends AppCompatActivity {
         int selected = intent.getIntExtra("selected", 0);
         setContentView(R.layout.settings_activity);
         WearableRecyclerView recyclerView = findViewById(R.id.settings_menu_view);
-        recyclerView.setEdgeItemsCenteringEnabled(true);
-        CustomScrollingLayoutCallback customScrollingLayoutCallback =
-                new CustomScrollingLayoutCallback();
-        recyclerView.setLayoutManager(
-                new WearableLinearLayoutManager(this, customScrollingLayoutCallback));
+        if (getResources().getBoolean(R.bool.is_round)) {
+            recyclerView.setEdgeItemsCenteringEnabled(true);
+            CustomScrollingLayoutCallback customScrollingLayoutCallback =
+                    new CustomScrollingLayoutCallback();
+            recyclerView.setLayoutManager(
+                    new WearableLinearLayoutManager(this, customScrollingLayoutCallback));
+        } else {
+            recyclerView.setLayoutManager(
+                    new WearableLinearLayoutManager(this));
+        }
         recyclerView.setAdapter(new SettingsSubMenuAdapter(this, setting, values, selected));
-        //Intent resultIntent = new Intent();
-        //resultIntent.putExtra("selected", 0);
-        //setResult(Activity.RESULT_OK, 0);
     }
 }

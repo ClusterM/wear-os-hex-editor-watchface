@@ -69,6 +69,11 @@
             android:label="Settings"
             android:theme="@style/MyMaterialTheme">
         </activity>
+        <activity
+            android:name=".ExplanationActivity"
+            android:label="Explanation"
+            android:theme="@style/MyMaterialTheme">
+        </activity>
 
         <meta-data
             android:name="com.google.android.gms.version"

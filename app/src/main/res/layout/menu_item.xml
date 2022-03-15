@@ -1,59 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/settingsContainer"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:orientation="horizontal"
-    android:layout_marginLeft="5dp"
-    android:layout_marginRight="5dp">
+    android:orientation="horizontal">
 
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/imageViewLeft"
             android:layout_width="20dp"
-            android:layout_height="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginStart="5dp"
             android:scaleType="fitXY"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/menu_background_left" />
 
-        <LinearLayout
+        <ImageView
+            android:id="@+id/imageViewCenter"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:background="@drawable/menu_background_center"
-            android:gravity="center">
+            android:layout_height="0dp"
+            android:scaleType="fitXY"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/imageViewRight"
+            app:layout_constraintStart_toEndOf="@+id/imageViewLeft"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/menu_background_center" />
 
-                <TextView
-                    android:id="@+id/textViewSettingKey"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="key"
-                    android:textSize="15dp"/>
+        <TextView
+            android:id="@+id/textViewSettingKey"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="16dp"
+            android:gravity="center_vertical|left"
+            android:text="key"
+            android:textSize="15dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/guideline"
+            app:layout_constraintStart_toStartOf="@+id/imageViewLeft"
+            app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/textViewSettingValue"
-                    android:layout_width="60dp"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:paddingLeft="8dp"
-                    android:text="value"
-                    android:textSize="12sp"/>
+        <TextView
+            android:id="@+id/textViewSettingValue"
+            android:layout_width="60dp"
+            android:layout_height="0dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:paddingLeft="8dp"
+            android:text="value"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@+id/imageViewRight"
+            app:layout_constraintStart_toEndOf="@+id/guideline"
+            app:layout_constraintTop_toTopOf="parent" />
 
-                <RadioButton
-                    android:id="@+id/radioButtonSettingValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:enabled="true"
-                    android:checked="false"
-                    android:layout_marginLeft="10dp"
-                    android:visibility="gone"/>
-        </LinearLayout>
+        <RadioButton
+            android:id="@+id/radioButtonSettingValue"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:checked="false"
+            android:enabled="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@+id/imageViewCenter"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
-            android:id="@+id/imageView2"
+            android:id="@+id/imageViewRight"
             android:layout_width="20dp"
-            android:layout_height="70dp"
+            android:layout_height="0dp"
+            android:layout_marginEnd="5dp"
             android:scaleType="fitXY"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/menu_background_right" />
-</LinearLayout>
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintGuide_percent="0.6"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/textViewSettingExplanation"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:text="Explanation"
+            android:textSize="25dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:visibility="visible"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class SettingsSubMenuAdapter extends RecyclerView.Adapter<SettingsSubMenuAdapter.RecyclerViewHolder> {
@@ -39,9 +40,10 @@ public class SettingsSubMenuAdapter extends RecyclerView.Adapter<SettingsSubMenu
 
     public static class RecyclerViewHolder extends RecyclerView.ViewHolder {
         private Context mContext;
-        LinearLayout menuContainer;
+        ConstraintLayout menuContainer;
         TextView menuItemSettingKey;
         TextView menuItemSettingValue;
+        TextView menuItemSettingExplanation;
         RadioButton menuItemSettingRadio;
 
         public RecyclerViewHolder(Context context, View view) {
@@ -50,9 +52,8 @@ public class SettingsSubMenuAdapter extends RecyclerView.Adapter<SettingsSubMenu
             menuContainer = view.findViewById(R.id.settingsContainer);
             menuItemSettingKey = view.findViewById(R.id.textViewSettingKey);
             menuItemSettingValue = view.findViewById(R.id.textViewSettingValue);
+            menuItemSettingExplanation = view.findViewById(R.id.textViewSettingExplanation);
             menuItemSettingRadio = view.findViewById(R.id.radioButtonSettingValue);
-            menuItemSettingValue.setVisibility(View.GONE);
-            menuItemSettingRadio.setVisibility(View.VISIBLE);
         }
     }
 
@@ -76,6 +77,10 @@ public class SettingsSubMenuAdapter extends RecyclerView.Adapter<SettingsSubMenu
             holder.menuItemSettingRadio.setChecked(false);
             holder.menuItemSettingRadio.setChecked(true);
         });
+        holder.menuItemSettingKey.setVisibility(View.VISIBLE);
+        holder.menuItemSettingValue.setVisibility(View.GONE);
+        holder.menuItemSettingRadio.setVisibility(View.VISIBLE);
+        holder.menuItemSettingExplanation.setVisibility(View.GONE);
     }
 
     @Override
