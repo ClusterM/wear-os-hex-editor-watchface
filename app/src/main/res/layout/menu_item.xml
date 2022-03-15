@@ -33,26 +33,24 @@
             android:id="@+id/textViewSettingKey"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginStart="16dp"
             android:gravity="center_vertical|left"
             android:text="key"
-            android:textSize="15dp"
+            android:textSize="20sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/guideline"
-            app:layout_constraintStart_toStartOf="@+id/imageViewLeft"
+            app:layout_constraintStart_toEndOf="@+id/imageViewLeft"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/textViewSettingValue"
             android:layout_width="60dp"
             android:layout_height="0dp"
-            android:layout_marginEnd="8dp"
             android:gravity="center"
             android:paddingLeft="8dp"
             android:text="value"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="@+id/imageViewRight"
+            app:layout_constraintEnd_toStartOf="@+id/imageViewRight"
             app:layout_constraintStart_toEndOf="@+id/guideline"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -92,7 +90,7 @@
             android:layout_height="0dp"
             android:gravity="center"
             android:text="Explanation"
-            android:textSize="25dp"
+            android:textSize="25sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
