@@ -1,2 +1,16 @@
-# wear-os-hex-editor-watchface
-Hex Editor Watchface for Wear OS
+# Hex Editor Watch Face for Wear OS
+
+This watch face looks like retro hex editors for DOS.
+
+![Preview](/app/src/main/res/drawable-nodpi/icon.png)
+
+Features:
+* Retro-style scanlines
+* Support for round watch as well as rectangular
+* Time can be displayed in both decimal and hexadecimal systems
+* Optionally date, heart rate, steps and battery status can be displayed in both decimal and hexadecimal systems
+* "Hexadecimal but decimal on tap" feature
+* Ability to switch between little and big endianness
+* Vignetting for round displays which looks like CRT monitor
+* Background can be filled with zeros or random data
+* Low power consumption when Always-on-Display active
