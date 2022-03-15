@@ -34,6 +34,7 @@ import android.view.SurfaceHolder;
 import androidx.core.content.ContextCompat;
 
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -67,6 +68,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static class EngineHandler extends Handler {
         private final WeakReference<HexWatchFace.Engine> mWeakReference;
 
+        @SuppressWarnings("deprecation")
         public EngineHandler(HexWatchFace.Engine reference) {
             mWeakReference = new WeakReference<>(reference);
         }
@@ -168,9 +170,9 @@ public class HexWatchFace extends CanvasWatchFaceService {
             }
         }
 
+        @SuppressWarnings("IntegerDivisionInFloatingPointContext")
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
-            Context context = getApplicationContext();
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
             Resources res = getApplicationContext().getResources();
             long now = System.currentTimeMillis();
@@ -192,7 +194,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 }
             }
 
-            int todayStepStart = 0;
             int todaySteps = 0;
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                 if (mStepCountSensor == null) {
@@ -200,7 +201,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
                 }
 
-                todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
+                int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
                 if (mStepCounter >= 0 && (
                         (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
                         || (mStepCounter < todayStepStart))
@@ -262,8 +263,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                                 mBackground[i] = (int) (Math.random() * 256);
                             break;
                         case PREF_VALUE_BACKGROUND_ZEROS:
-                            for (int i = 0; i < mBackground.length; i++)
-                                mBackground[i] = 0;
+                            Arrays.fill(mBackground, 0);
                             break;
                     }
                     prefs.edit().putBoolean(getString(R.string.pref_background_redraw), false).apply();
@@ -382,7 +382,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 }
 
                 if (prefs.getInt(getString(R.string.pref_vignetting), res.getInteger(R.integer.default_vignetting))
-                    == SettingsActivity.PREF_VALUE_VINGETTING_ENABLED) {
+                    == SettingsActivity.PREF_VALUE_VIGNETTING_ENABLED) {
                     canvas.drawBitmap(mVignettingBitmap,
                             new Rect(0, 0, mVignettingBitmap.getWidth(), mVignettingBitmap.getHeight()),
                             new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
@@ -404,22 +404,23 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 switch (endianness)
                 {
                     case ENDIANNESS_BIG_ENDIAN:
-                        digit = (number >> i) & 0xFF;
+                        digit = (number >> ((size - i - 1) * 8)) & 0xFF;
                         break;
                     case ENDIANNESS_LITTLE_ENDIAN:
-                        base = (int)Math.pow(256, (size - i - 1));
-                        digit = (number / base) % 256;
+                        digit = (number >> i * 8) & 0xFF;
                         break;
                     default:
                     case ENDIANNESS_FAKE_HEX:
                         base = (int)Math.pow(100, (size - i - 1));
                         digit = (number / base) % 100;
                         digit = (digit % 10) | ((digit / 10) * 16);
+                        break;
                 }
                 drawNumberAtPos(canvas, digit, numberColor, left + i, top);
             }
         }
 
+        @SuppressWarnings("IntegerDivisionInFloatingPointContext")
         private void drawNumberAtPos(Canvas canvas, int number, int numberColor,
                                      float left, float top)
         {
@@ -512,7 +513,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     break;
                 case Sensor.TYPE_STEP_COUNTER:
                     mStepCounter = (int)event.values[0];
-                    Log.d(TAG, "Steps: " + mStepCounter);
+                    //Log.d(TAG, "Steps: " + mStepCounter);
                     break;
             }
         }

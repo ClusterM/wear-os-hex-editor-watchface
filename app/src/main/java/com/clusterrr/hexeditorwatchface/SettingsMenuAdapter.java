@@ -1,6 +1,5 @@
 package com.clusterrr.hexeditorwatchface;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.view.LayoutInflater;
@@ -15,9 +14,9 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapter.RecyclerViewHolder> {
-    private Setting[] mSettings;
-    private AppCompatActivity mContext;
-    private SettingsMenuAdapter.RecyclerViewHolder[] mHolders;
+    private final Setting[] mSettings;
+    private final AppCompatActivity mContext;
+    private final SettingsMenuAdapter.RecyclerViewHolder[] mHolders;
 
     public SettingsMenuAdapter(AppCompatActivity context, Setting[] settings) {
         this.mContext = context;
@@ -68,20 +67,18 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
     @Override
     public RecyclerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.menu_item, parent, false);
-        return new RecyclerViewHolder(mContext, view);
+        return new RecyclerViewHolder(view);
     }
 
     public static class RecyclerViewHolder extends RecyclerView.ViewHolder {
-        private Context mContext;
         ConstraintLayout menuContainer;
         TextView menuItemSettingKey;
         TextView menuItemSettingValue;
         TextView menuItemSettingExplanation;
         RadioButton menuItemSettingRadio;
 
-        public RecyclerViewHolder(AppCompatActivity context, View view) {
+        public RecyclerViewHolder(View view) {
             super(view);
-            this.mContext = context;
             menuContainer = view.findViewById(R.id.settingsContainer);
             menuItemSettingKey = view.findViewById(R.id.textViewSettingKey);
             menuItemSettingValue = view.findViewById(R.id.textViewSettingValue);
@@ -92,9 +89,8 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
 
     @Override
     public void onBindViewHolder(@NonNull SettingsMenuAdapter.RecyclerViewHolder holder, int position) {
-        final int pos = position;
-        mHolders[pos] = holder;
-        updateHolder(pos);
+        mHolders[position] = holder;
+        updateHolder(position);
     }
 
     @Override

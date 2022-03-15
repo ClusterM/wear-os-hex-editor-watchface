@@ -62,7 +62,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     public static final int PREF_VALUE_BARS_SHOW = 1;
 
-    public static final int PREF_VALUE_VINGETTING_ENABLED = 1;
+    public static final int PREF_VALUE_VIGNETTING_ENABLED = 1;
 
     public static final int PREF_DEFAULT_TIME_FORMAT = PREF_TIME_FORMAT_24;
     public static final int PREF_DEFAULT_TIME_SYSTEM = PREF_VALUE_TIME_DEC;
@@ -74,12 +74,12 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int PREF_DEFAULT_ENDIANNESS = PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN;
     public static final int PREF_DEFAULT_BACKGROUND = PREF_VALUE_BACKGROUND_ZEROS;
     public static final int PREF_DEFAULT_BARS = PREF_VALUE_BARS_SHOW;
-    //public static final int PREF_DEFAULT_VIGNETTING = PREF_VALUE_VINGETTING_ENABLED;
+    //public static final int PREF_DEFAULT_VIGNETTING = PREF_VALUE_VIGNETTING_ENABLED;
 
     private Setting[] mSettings;
     SettingsMenuAdapter mSettingsMenuAdapter;
 
-    private ActivityResultLauncher<String> requestPermissionLauncherBody
+    private final ActivityResultLauncher<String> requestPermissionLauncherBody
             = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
         if (isGranted) {
             Log.i(TAG, "BODY_SENSORS granted");
@@ -90,7 +90,7 @@ public class SettingsActivity extends AppCompatActivity {
             mSettingsMenuAdapter.updateHolder(PREF_KEY_HEART_RATE);
         }
     });
-    private ActivityResultLauncher<String> requestPermissionActivity
+    private final ActivityResultLauncher<String> requestPermissionActivity
             = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
         if (isGranted) {
             Log.d(TAG, "ACTIVITY_RECOGNITION granted");
@@ -163,7 +163,7 @@ public class SettingsActivity extends AppCompatActivity {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
                             != PackageManager.PERMISSION_GRANTED) {
                         Log.d(TAG, "ACTIVITY_RECOGNITION request required");
-                        requestPermissionLauncherBody.launch(Manifest.permission.ACTIVITY_RECOGNITION);
+                        requestPermissionActivity.launch(Manifest.permission.ACTIVITY_RECOGNITION);
                     }
                 }
                 break;

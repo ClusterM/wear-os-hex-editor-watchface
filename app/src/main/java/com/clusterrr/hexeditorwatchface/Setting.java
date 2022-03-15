@@ -3,11 +3,11 @@ package com.clusterrr.hexeditorwatchface;
 import android.content.SharedPreferences;
 
 public class Setting {
-    private SharedPreferences mPrefs;
-    private String mName;
-    private String[] mValueNames;
-    private String mKey;
-    private int mDefaultValue;
+    private final SharedPreferences mPrefs;
+    private final String mName;
+    private final String[] mValueNames;
+    private final String mKey;
+    private final int mDefaultValue;
 
     public Setting(SharedPreferences prefs, String name, String[] valueNames, String key, int defaultValue) {
         mPrefs = prefs;
@@ -19,8 +19,6 @@ public class Setting {
 
     public String getName() { return mName; }
     public String[] getValueNames() { return mValueNames.clone(); }
-    public String getValueName(int i) { return mValueNames[i]; }
-    public int getValueCount() { return mValueNames.length; }
     public String getValueName() {
         try{
             return mValueNames[mPrefs.getInt(mKey, mDefaultValue)];

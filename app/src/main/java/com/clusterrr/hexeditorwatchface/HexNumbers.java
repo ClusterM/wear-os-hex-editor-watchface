@@ -9,9 +9,9 @@ public class HexNumbers {
     public static final byte COLORS_WHITE = 1;
     public static final byte COLORS_DARK = 2;
 
-    private Bitmap[] mDCyan;
-    private Bitmap[] mDWhite;
-    private Bitmap[] mDDark;
+    private final Bitmap[] mDCyan;
+    private final Bitmap[] mDWhite;
+    private final Bitmap[] mDDark;
 
     public Bitmap GetNumber(int number, int numberColor) {
         Bitmap[] digits;
