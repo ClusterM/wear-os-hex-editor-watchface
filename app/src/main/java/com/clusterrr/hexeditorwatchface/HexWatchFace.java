@@ -46,7 +46,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
      */
     public static String TAG = "hex_watchface";
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
-    private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(300);
+    private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(30);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
