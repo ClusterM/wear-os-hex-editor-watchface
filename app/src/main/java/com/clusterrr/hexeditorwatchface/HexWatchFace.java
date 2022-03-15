@@ -284,7 +284,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 drawNumber(canvas, mCalendar.get(Calendar.SECOND), timeEndianness, 1,HexNumbers.COLORS_CYAN, 2, 0);
 
                 int dateSystem = prefs.getInt(getString(R.string.pref_date), SettingsActivity.PREF_DEFAULT_DATE);
-                if (dateSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                if (dateSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     int dateEndianness;
                     if (dateSystem  == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         dateSystem = tapped
@@ -305,14 +305,14 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 }
 
                 int dayOfTheWeekMode = prefs.getInt(getString(R.string.pref_day_week), SettingsActivity.PREF_DEFAULT_DAY_OF_THE_WEEK);
-                if (dayOfTheWeekMode != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                if (dayOfTheWeekMode != SettingsActivity.PREF_VALUE_HIDE) {
                     int dayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK) - 1;
                             if ((dayOfTheWeek == 0) && (dayOfTheWeekMode == SettingsActivity.PREF_VALUE_DAY_SUNDAY_7)) dayOfTheWeek = 7;
                     drawNumber(canvas, dayOfTheWeek, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
                 }
 
                 int heartRateSystem = prefs.getInt(getString(R.string.pref_heart_rate), SettingsActivity.PREF_DEFAULT_HEART_RATE);
-                if (heartRateSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                if (heartRateSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     if (heartRateSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         heartRateSystem = tapped
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
@@ -329,7 +329,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 }
 
                 int batterySystem = prefs.getInt(getString(R.string.pref_battery), SettingsActivity.PREF_DEFAULT_BATTERY);
-                if (batterySystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                if (batterySystem != SettingsActivity.PREF_VALUE_HIDE) {
                     switch(batterySystem) {
                         case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF_TAP:
                             batterySystem = tapped
@@ -357,7 +357,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 }
 
                 int stepsSystem = prefs.getInt(getString(R.string.pref_steps), SettingsActivity.PREF_DEFAULT_STEPS);
-                if (stepsSystem != SettingsActivity.PREF_VALUE_NOT_SHOW) {
+                if (stepsSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     if (stepsSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         stepsSystem = tapped
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC

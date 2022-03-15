@@ -31,7 +31,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int PREF_KEY_BARS = 9;
     public static final int PREF_KEY_VIGNETTING = 10;
 
-    public static final int PREF_VALUE_NOT_SHOW = 0;
+    public static final int PREF_VALUE_HIDE = 0;
 
     public static final int PREF_TIME_FORMAT_12 = 0;
     public static final int PREF_TIME_FORMAT_24 = 1;
@@ -66,11 +66,11 @@ public class SettingsActivity extends AppCompatActivity {
 
     public static final int PREF_DEFAULT_TIME_FORMAT = PREF_TIME_FORMAT_24;
     public static final int PREF_DEFAULT_TIME_SYSTEM = PREF_VALUE_TIME_DEC;
-    public static final int PREF_DEFAULT_DATE = PREF_VALUE_NOT_SHOW;
-    public static final int PREF_DEFAULT_DAY_OF_THE_WEEK = PREF_VALUE_NOT_SHOW;
-    public static final int PREF_DEFAULT_HEART_RATE = PREF_VALUE_NOT_SHOW;
-    public static final int PREF_DEFAULT_STEPS = PREF_VALUE_NOT_SHOW;
-    public static final int PREF_DEFAULT_BATTERY = PREF_VALUE_NOT_SHOW;
+    public static final int PREF_DEFAULT_DATE = PREF_VALUE_HIDE;
+    public static final int PREF_DEFAULT_DAY_OF_THE_WEEK = PREF_VALUE_HIDE;
+    public static final int PREF_DEFAULT_HEART_RATE = PREF_VALUE_HIDE;
+    public static final int PREF_DEFAULT_STEPS = PREF_VALUE_HIDE;
+    public static final int PREF_DEFAULT_BATTERY = PREF_VALUE_HIDE;
     public static final int PREF_DEFAULT_ENDIANNESS = PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN;
     public static final int PREF_DEFAULT_BACKGROUND = PREF_VALUE_BACKGROUND_ZEROS;
     public static final int PREF_DEFAULT_BARS = PREF_VALUE_BARS_SHOW;
@@ -86,7 +86,7 @@ public class SettingsActivity extends AppCompatActivity {
         } else {
             // Rollback
             Log.i(TAG, "BODY_SENSORS not granted");
-            mSettings[PREF_KEY_HEART_RATE].setValue(PREF_VALUE_NOT_SHOW);
+            mSettings[PREF_KEY_HEART_RATE].setValue(PREF_VALUE_HIDE);
             mSettingsMenuAdapter.updateHolder(PREF_KEY_HEART_RATE);
         }
     });
@@ -96,7 +96,7 @@ public class SettingsActivity extends AppCompatActivity {
             Log.d(TAG, "ACTIVITY_RECOGNITION granted");
         } else {
             Log.d(TAG, "ACTIVITY_RECOGNITION not granted");
-            mSettings[PREF_KEY_STEPS].setValue(PREF_VALUE_NOT_SHOW);
+            mSettings[PREF_KEY_STEPS].setValue(PREF_VALUE_HIDE);
             mSettingsMenuAdapter.updateHolder(PREF_KEY_STEPS);
         }
     });
@@ -150,7 +150,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         switch (setting) {
             case PREF_KEY_HEART_RATE:
-                if (selected != PREF_VALUE_NOT_SHOW) {
+                if (selected != PREF_VALUE_HIDE) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS)
                             != PackageManager.PERMISSION_GRANTED) {
                         Log.d(TAG, "BODY_SENSORS request required");
@@ -159,7 +159,7 @@ public class SettingsActivity extends AppCompatActivity {
                 }
                 break;
             case PREF_KEY_STEPS:
-                if (selected != PREF_VALUE_NOT_SHOW) {
+                if (selected != PREF_VALUE_HIDE) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
                             != PackageManager.PERMISSION_GRANTED) {
                         Log.d(TAG, "ACTIVITY_RECOGNITION request required");
