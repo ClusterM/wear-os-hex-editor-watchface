@@ -1,7 +1,10 @@
 package com.clusterrr.hexeditorwatchface;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,11 +20,13 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
     private final Setting[] mSettings;
     private final AppCompatActivity mContext;
     private final SettingsMenuAdapter.RecyclerViewHolder[] mHolders;
+    private final SensorManager mSensorManager;
 
     public SettingsMenuAdapter(AppCompatActivity context, Setting[] settings) {
-        this.mContext = context;
+        mContext = context;
         mSettings = settings;
-        this.mHolders = new SettingsMenuAdapter.RecyclerViewHolder[settings.length + 1];
+        mHolders = new SettingsMenuAdapter.RecyclerViewHolder[settings.length + 1];
+        mSensorManager = ((SensorManager)context.getSystemService(Context.SENSOR_SERVICE));
     }
 
     public void updateHolder(int pos)
@@ -44,7 +49,7 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
             holder.menuItemSettingRadio.setVisibility(View.GONE);
             holder.menuItemSettingExplanation.setVisibility(View.GONE);
         } else {
-            // Show some explanation
+                // Show some explanation
             holder.menuItemSettingKey.setText("Explanation");
             holder.menuItemSettingValue.setText("");
 
@@ -57,10 +62,19 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
             holder.menuItemSettingRadio.setVisibility(View.GONE);
             holder.menuItemSettingExplanation.setVisibility(View.VISIBLE);
         }
+        boolean enabled = true;
+        if ((pos == SettingsActivity.PREF_KEY_VIGNETTING) && !res.getBoolean(R.bool.is_round))
+            enabled = false;
+        if ((pos == SettingsActivity.PREF_KEY_HEART_RATE) &&
+            (mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE) == null))
+            enabled = false;
+        if ((pos == SettingsActivity.PREF_KEY_STEPS) &&
+            (mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) == null))
+            enabled = false;
         // Disable vignetting for rectangular screens
-        holder.menuContainer.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
-        holder.menuItemSettingKey.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
-        holder.menuItemSettingValue.setEnabled(res.getBoolean(R.bool.is_round) || pos != SettingsActivity.PREF_KEY_VIGNETTING);
+        holder.menuContainer.setEnabled(enabled);
+        holder.menuItemSettingKey.setEnabled(enabled);
+        holder.menuItemSettingValue.setEnabled(enabled);
     }
 
     @NonNull
