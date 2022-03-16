@@ -4,6 +4,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+/* Class to store loaded digit images */
 public class HexNumbers {
     public static final byte COLORS_CYAN = 0;
     public static final byte COLORS_WHITE = 1;

@@ -30,6 +30,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int PREF_KEY_BACKGROUND = 8;
     public static final int PREF_KEY_BARS = 9;
     public static final int PREF_KEY_VIGNETTING = 10;
+    public static final int PREF_KEY_ANTI_BURN_IN = 11;
 
     public static final int PREF_VALUE_HIDE = 0;
 
@@ -62,7 +63,8 @@ public class SettingsActivity extends AppCompatActivity {
 
     public static final int PREF_VALUE_BARS_SHOW = 1;
 
-    public static final int PREF_VALUE_VIGNETTING_ENABLED = 1;
+    public static final int PREF_VALUE_DISABLED = 0;
+    public static final int PREF_VALUE_ENABLED = 1;
 
     public static final int PREF_DEFAULT_TIME_FORMAT = PREF_TIME_FORMAT_24;
     public static final int PREF_DEFAULT_TIME_SYSTEM = PREF_VALUE_TIME_DEC;
@@ -74,7 +76,8 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int PREF_DEFAULT_ENDIANNESS = PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN;
     public static final int PREF_DEFAULT_BACKGROUND = PREF_VALUE_BACKGROUND_ZEROS;
     public static final int PREF_DEFAULT_BARS = PREF_VALUE_BARS_SHOW;
-    //public static final int PREF_DEFAULT_VIGNETTING = PREF_VALUE_VIGNETTING_ENABLED;
+    //public static final int PREF_DEFAULT_VIGNETTING = PREF_VALUE_ENABLED;
+    public static final int PREF_DEFAULT_ANTI_BURN_IN = PREF_VALUE_DISABLED;;
 
     private Setting[] mSettings;
     SettingsMenuAdapter mSettingsMenuAdapter;
@@ -123,6 +126,7 @@ public class SettingsActivity extends AppCompatActivity {
                 new Setting(prefs, "Background", new String[] {"Random every second", "Random once", "Zeros"}, getString(R.string.pref_background), PREF_DEFAULT_BACKGROUND),
                 new Setting(prefs, "Vertical bars", new String[] {"Hide", "Show"}, getString(R.string.pref_bars), PREF_DEFAULT_BARS),
                 new Setting(prefs, "Round vignetting", new String[] {"Disabled", "Enabled"}, getString(R.string.pref_vignetting), res.getInteger(R.integer.default_vignetting)),
+                new Setting(prefs, "AoD anti-burn-in protection", new String[] {"Disabled", "Enabled"}, getString(R.string.pref_anti_burn_in), PREF_DEFAULT_ANTI_BURN_IN),
         };
 
         WearableRecyclerView recyclerView = findViewById(R.id.settings_menu_view);

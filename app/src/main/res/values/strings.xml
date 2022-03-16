@@ -16,4 +16,5 @@
     <string name="pref_background_redraw">background_redraw</string>
     <string name="pref_bars">bars</string>
     <string name="pref_vignetting">vignetting</string>
+    <string name="pref_anti_burn_in">anti_burn_in</string>
 </resources>

@@ -1,9 +1,5 @@
 package com.clusterrr.hexeditorwatchface;
 
-import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM;
-import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM_ONCE;
-import static com.clusterrr.hexeditorwatchface.SettingsActivity.PREF_VALUE_BACKGROUND_ZEROS;
-
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -40,17 +36,14 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public class HexWatchFace extends CanvasWatchFaceService {
-    /*
-     * Updates rate in milliseconds for interactive mode. We update once a second to advance the
-     * second hand.
-     */
     public static String TAG = "hex_watchface";
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(30);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
+    private static final long ANTI_BURN_OUT_TIME = TimeUnit.SECONDS.toMillis(10);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
-    private static final int BACKGROUND_OFFSET = -54;
+    private static final int BACKGROUND_Y_OFFSET = -54;
     private static final int ENDIANNESS_LITTLE_ENDIAN = 0;
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
@@ -109,6 +102,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
         private int mBackgroundMaxX = 0;
         private int mBackgroundMaxY = 0;
         private int[] mBackground;
+        private long mAoDStartTS = 0;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -173,17 +167,20 @@ public class HexWatchFace extends CanvasWatchFaceService {
         @SuppressWarnings("IntegerDivisionInFloatingPointContext")
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
+            // Main variables
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
             Resources res = getApplicationContext().getResources();
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
 
+            // Calculate edges
             if (mBackgroundMinX == 0) mBackgroundMinX = -canvas.getWidth() / 2 / NUMBER_WIDTH;
             if (mBackgroundMaxX == 0) mBackgroundMaxX = canvas.getWidth() / 2 / NUMBER_WIDTH + 1;
             if (mBackgroundMinY == 0) mBackgroundMinY = -canvas.getWidth() / 2 / NUMBER_V_INTERVAL;
             if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 1;
 
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
+                // Enable heart rate sensor if need
                 if (mHeartRateSensor == null) {
                     mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
                     mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
@@ -196,37 +193,46 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
             int todaySteps = 0;
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+                // Enable step sensor if need
                 if (mStepCountSensor == null) {
                     mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
                     mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
                 }
 
+                // It's a bit tricky because we can get steps since reboot only
                 int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
                 if (mStepCounter >= 0 && (
+                        // Check if it's new day
                         (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
-                        || (mStepCounter < todayStepStart))
+                        || (mStepCounter < todayStepStart)) // or value reset
                     ) {
+                    // Store new day values
                     prefs.edit()
                             .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
                             .putInt(getString(R.string.pref_today_step_start), mStepCounter)
                             .apply();
                     todayStepStart = mStepCounter;
                 }
+                // Calculate today steps
                 todaySteps = Math.max(mStepCounter - todayStepStart, 0);
             }
 
+            // Read battery state
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             Intent batteryIntent = getApplicationContext().registerReceiver(null, filter);
             int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
 
+            // Check if screen was tapped recently
             boolean tapped = mTouchTS + TOUCH_TIME >= now;
 
+            // Endianness
             int endianness =
                     (prefs.getInt(getString(R.string.pref_endianness), SettingsActivity.PREF_DEFAULT_ENDIANNESS)
                     == SettingsActivity.PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN)
                         ? ENDIANNESS_LITTLE_ENDIAN
                         : ENDIANNESS_BIG_ENDIAN;
 
+            // Calculate current hour - 12 or 24 format
             int hour;
             if (prefs.getInt(getString(R.string.pref_time_format), SettingsActivity.PREF_DEFAULT_TIME_FORMAT)
                     == SettingsActivity.PREF_TIME_FORMAT_12)
@@ -234,44 +240,49 @@ public class HexWatchFace extends CanvasWatchFaceService {
             else
                 hour = mCalendar.get(Calendar.HOUR_OF_DAY);
             int timeSystem = prefs.getInt(getString(R.string.pref_time_system), SettingsActivity.PREF_DEFAULT_TIME_SYSTEM);
-            int timeEndianness;
+            if (timeSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
+                timeSystem = tapped
+                        ? SettingsActivity.PREF_VALUE_COMMON_DEC
+                        : SettingsActivity.PREF_VALUE_COMMON_HEX;
             switch (timeSystem) {
                 default:
                 case SettingsActivity.PREF_VALUE_TIME_DEC:
-                    timeEndianness = ENDIANNESS_FAKE_HEX;
+                    timeSystem = ENDIANNESS_FAKE_HEX;
                     break;
                 case SettingsActivity.PREF_VALUE_TIME_HEX:
-                    timeEndianness = ENDIANNESS_LITTLE_ENDIAN;
-                    break;
-                case SettingsActivity.PREF_VALUE_TIME_DEC_ON_TAP:
-                    timeEndianness = tapped ? ENDIANNESS_FAKE_HEX : ENDIANNESS_LITTLE_ENDIAN;
+                    timeSystem = ENDIANNESS_LITTLE_ENDIAN;
                     break;
             }
 
             if (!mAmbient) {
+                // Interactive mode
+
+                // Draw blue background
                 canvas.drawBitmap(mBackgroundBitmap,
                         canvas.getWidth() / 2 - mBackgroundBitmap.getWidth() / 2,
-                        canvas.getHeight() / 2 - mBackgroundBitmap.getHeight() / 2 + BACKGROUND_OFFSET,
+                        canvas.getHeight() / 2 - mBackgroundBitmap.getHeight() / 2 + BACKGROUND_Y_OFFSET,
                         null);
 
+                // Generate background digits
                 int backgroundMode = prefs.getInt(getString(R.string.pref_background), SettingsActivity.PREF_DEFAULT_BACKGROUND);
                 if (mBackground == null || prefs.getBoolean(getString(R.string.pref_background_redraw), false)) {
                     mBackground = new int[(mBackgroundMaxX - mBackgroundMinX + 1) * (mBackgroundMaxY - mBackgroundMinY + 1)];
                     switch (backgroundMode) {
-                        case PREF_VALUE_BACKGROUND_RANDOM_ONCE:
+                        case SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM_ONCE:
                             for (int i = 0; i < mBackground.length; i++)
                                 mBackground[i] = (int) (Math.random() * 256);
                             break;
-                        case PREF_VALUE_BACKGROUND_ZEROS:
+                        case SettingsActivity.PREF_VALUE_BACKGROUND_ZEROS:
                             Arrays.fill(mBackground, 0);
                             break;
                     }
                     prefs.edit().putBoolean(getString(R.string.pref_background_redraw), false).apply();
                 }
-                if (backgroundMode == PREF_VALUE_BACKGROUND_RANDOM) {
+                if (backgroundMode == SettingsActivity.PREF_VALUE_BACKGROUND_RANDOM) {
                         for (int i = 0; i < mBackground.length; i++)
                             mBackground[i] = (int) (Math.random() * 256);
                 }
+                // Draw background digits
                 int p = 0;
                 for (int x = mBackgroundMinX; x <= mBackgroundMaxX; x++) {
                     for (int y = mBackgroundMinY; y < mBackgroundMaxY; y++) {
@@ -279,29 +290,32 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                 }
 
-                drawNumber(canvas, hour, timeEndianness, 1, HexNumbers.COLORS_WHITE, 0, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeEndianness, 1,HexNumbers.COLORS_WHITE, 1, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.SECOND), timeEndianness, 1,HexNumbers.COLORS_CYAN, 2, 0);
+                // Draw hours, minutes and seconds
+                drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_WHITE, 0, 0);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1,HexNumbers.COLORS_WHITE, 1, 0);
+                drawNumber(canvas, mCalendar.get(Calendar.SECOND), timeSystem, 1,HexNumbers.COLORS_CYAN, 2, 0);
 
+                // Draw date if enabled
                 int dateSystem = prefs.getInt(getString(R.string.pref_date), SettingsActivity.PREF_DEFAULT_DATE);
                 if (dateSystem != SettingsActivity.PREF_VALUE_HIDE) {
-                    int dateEndianness;
+                    // Check tap mode
                     if (dateSystem  == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         dateSystem = tapped
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
                                 : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                    // Check system
                     switch (dateSystem) {
                         default:
                         case SettingsActivity.PREF_VALUE_COMMON_DEC:
-                            dateEndianness = ENDIANNESS_FAKE_HEX;
+                            dateSystem = ENDIANNESS_FAKE_HEX;
                             break;
                         case SettingsActivity.PREF_VALUE_COMMON_HEX:
-                            dateEndianness = ENDIANNESS_LITTLE_ENDIAN;
+                            dateSystem = ENDIANNESS_LITTLE_ENDIAN;
                             break;
                     }
-                    drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_MONTH), dateEndianness, 1, HexNumbers.COLORS_CYAN, 2, 1);
-                    drawNumber(canvas, mCalendar.get(Calendar.MONTH) + 1, dateEndianness, 1, HexNumbers.COLORS_CYAN, 2, -1);
-                    drawNumber(canvas, mCalendar.get(Calendar.YEAR), dateEndianness, 1, HexNumbers.COLORS_CYAN, 1, -1);
+                    drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_MONTH), dateSystem, 1, HexNumbers.COLORS_CYAN, 2, 1);
+                    drawNumber(canvas, mCalendar.get(Calendar.MONTH) + 1, dateSystem, 1, HexNumbers.COLORS_CYAN, 2, -1);
+                    drawNumber(canvas, mCalendar.get(Calendar.YEAR), dateSystem, 1, HexNumbers.COLORS_CYAN, 1, -1);
                 }
 
                 int dayOfTheWeekMode = prefs.getInt(getString(R.string.pref_day_week), SettingsActivity.PREF_DEFAULT_DAY_OF_THE_WEEK);
@@ -311,6 +325,39 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     drawNumber(canvas, dayOfTheWeek, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
                 }
 
+
+                // Draw battery if enabled
+                int batterySystem = prefs.getInt(getString(R.string.pref_battery), SettingsActivity.PREF_DEFAULT_BATTERY);
+                if (batterySystem != SettingsActivity.PREF_VALUE_HIDE) {
+                    // Check tap mode
+                    switch(batterySystem) {
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF_TAP:
+                            batterySystem = tapped
+                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
+                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF;
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64_TAP:
+                            batterySystem = tapped
+                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
+                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64;
+                            break;
+                    }
+                    // Check system
+                    switch (batterySystem) {
+                        default:
+                        case SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100:
+                            drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64:
+                            drawNumber(canvas, battery, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            break;
+                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF:
+                            drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            break;
+                    }
+                }
+
+                // Draw heart rate if enabled
                 int heartRateSystem = prefs.getInt(getString(R.string.pref_heart_rate), SettingsActivity.PREF_DEFAULT_HEART_RATE);
                 if (heartRateSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     if (heartRateSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
@@ -328,40 +375,15 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                 }
 
-                int batterySystem = prefs.getInt(getString(R.string.pref_battery), SettingsActivity.PREF_DEFAULT_BATTERY);
-                if (batterySystem != SettingsActivity.PREF_VALUE_HIDE) {
-                    switch(batterySystem) {
-                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF_TAP:
-                            batterySystem = tapped
-                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
-                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF;
-                            break;
-                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64_TAP:
-                            batterySystem = tapped
-                                    ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
-                                    : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64;
-                            break;
-                    }
-                    switch (batterySystem) {
-                        default:
-                        case SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100:
-                            drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
-                            break;
-                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64:
-                            drawNumber(canvas, battery, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
-                            break;
-                        case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF:
-                            drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
-                            break;
-                    }
-                }
-
+                // Draw steps if enabled
                 int stepsSystem = prefs.getInt(getString(R.string.pref_steps), SettingsActivity.PREF_DEFAULT_STEPS);
                 if (stepsSystem != SettingsActivity.PREF_VALUE_HIDE) {
+                    // Check tap mode
                     if (stepsSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         stepsSystem = tapped
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
                                 : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                    // Check system
                     switch (stepsSystem) {
                         default:
                         case SettingsActivity.PREF_VALUE_COMMON_DEC:
@@ -373,25 +395,53 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                 }
 
+                // Draw vertical bars if enabled
                 if (prefs.getInt(getString(R.string.pref_bars), SettingsActivity.PREF_DEFAULT_BARS)
                         == SettingsActivity.PREF_VALUE_BARS_SHOW) {
                     canvas.drawBitmap(mBarsBitmap,
                             canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
-                            canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_OFFSET,
+                            canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_Y_OFFSET,
                             null);
                 }
 
+                // Draw vignetting if enabled
                 if (prefs.getInt(getString(R.string.pref_vignetting), res.getInteger(R.integer.default_vignetting))
-                    == SettingsActivity.PREF_VALUE_VIGNETTING_ENABLED) {
+                    == SettingsActivity.PREF_VALUE_ENABLED) {
+                    // Scale it to the screen size
                     canvas.drawBitmap(mVignettingBitmap,
                             new Rect(0, 0, mVignettingBitmap.getWidth(), mVignettingBitmap.getHeight()),
                             new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
                             null);
                 }
+
+                // Remember that AoD disabled
+                mAoDStartTS = 0;
             } else {
+                // Always-on-Display mode
+
+                // Remember when switched to AoD mode
+                if (mAoDStartTS == 0) mAoDStartTS = now;
                 canvas.drawColor(Color.BLACK);
-                drawNumber(canvas, hour, timeEndianness, 1, HexNumbers.COLORS_DARK, 0, 0);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeEndianness, 1,HexNumbers.COLORS_DARK, 1, 0);
+                // Always-on-Display anti-burn-in protection
+                int x = 0;
+                int y = 0;
+                if ((prefs.getInt(getString(R.string.pref_anti_burn_in), SettingsActivity.PREF_DEFAULT_ANTI_BURN_IN)
+                        == SettingsActivity.PREF_VALUE_ENABLED)
+                        && (mAoDStartTS + ANTI_BURN_OUT_TIME < now)) {
+                    // y always random from edge to edge
+                    y = (int)(Math.round(Math.random() * mBackgroundMaxY - 2));
+                    // x is from edge to edge only when y==0 or screen is rectangle
+                    if ((y == 0) || !res.getBoolean(R.bool.is_round))
+                        x = (int) (Math.round(Math.random() * (mBackgroundMaxX - 2))); // from edge to edge
+                    else
+                        x = (int) (Math.round(Math.random())); // from -1 to 1
+                    // Randomly invert
+                    if (Math.round(Math.random()) == 0) x *= -1;
+                    if (Math.round(Math.random()) == 0) y *= -1;
+                }
+                // Draw hours and minutes
+                drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_DARK, 0 + x, 0 + y);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1,HexNumbers.COLORS_DARK, 1 + x, 0 + y);
             }
         }
 
