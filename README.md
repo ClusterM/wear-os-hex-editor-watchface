@@ -4,6 +4,8 @@ This watch face looks like retro hex editors for DOS.
 
 ![Preview](/app/src/main/res/drawable-nodpi/icon.png)
 
+![banner2](https://user-images.githubusercontent.com/4236181/158569428-2f0e8eac-a734-4714-afef-854265bae3d3.jpg)
+
 Features:
 * Retro-style scanlines
 * Support for round watch as well as rectangular
