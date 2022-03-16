@@ -14,3 +14,4 @@ Features:
 * Vignetting for round displays which looks like CRT monitor
 * Background can be filled with zeros or random data
 * Low power consumption when Always-on-Display active
+* Always-on-Display anti-burn-in protection
