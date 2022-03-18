@@ -6,11 +6,11 @@ android {
     compileSdk 32
 
     defaultConfig {
-        applicationId "com.clusterrr.hexeditorwatchface2"
+        applicationId "com.clusterrr.hexeditorwatchface"
         minSdk 23
         targetSdk 32
-        versionCode 5
-        versionName "1.1"
+        versionCode 8
+        versionName "1.3b"
     }
 
     buildTypes {

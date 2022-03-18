@@ -40,7 +40,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(30);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
-    private static final long ANTI_BURN_OUT_TIME = TimeUnit.SECONDS.toMillis(10);
+    private static final long ANTI_BURN_OUT_TIME = TimeUnit.SECONDS.toMillis(3);
+    private static final long ANTI_BURN_OUT_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
     private static final int BACKGROUND_Y_OFFSET = -54;
@@ -103,6 +104,9 @@ public class HexWatchFace extends CanvasWatchFaceService {
         private int mBackgroundMaxY = 0;
         private int[] mBackground;
         private long mAoDStartTS = 0;
+        private long mLastAmbientUpdateTS = 0;
+        private int mLastAmbientUpdateX = 0;
+        private int mLastAmbientUpdateY = 0;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -240,10 +244,10 @@ public class HexWatchFace extends CanvasWatchFaceService {
             else
                 hour = mCalendar.get(Calendar.HOUR_OF_DAY);
             int timeSystem = prefs.getInt(getString(R.string.pref_time_system), SettingsActivity.PREF_DEFAULT_TIME_SYSTEM);
-            if (timeSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
+            if (timeSystem == SettingsActivity.PREF_VALUE_TIME_DEC_ON_TAP)
                 timeSystem = tapped
-                        ? SettingsActivity.PREF_VALUE_COMMON_DEC
-                        : SettingsActivity.PREF_VALUE_COMMON_HEX;
+                        ? SettingsActivity.PREF_VALUE_TIME_DEC
+                        : SettingsActivity.PREF_VALUE_TIME_HEX;
             switch (timeSystem) {
                 default:
                 case SettingsActivity.PREF_VALUE_TIME_DEC:
@@ -349,10 +353,10 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             drawNumber(canvas, battery, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -2, 0);
                             break;
                         case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64:
-                            drawNumber(canvas, battery, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            drawNumber(canvas, battery, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_CYAN, -1, 0);
                             break;
                         case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF:
-                            drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 2, HexNumbers.COLORS_CYAN, -1, 0);
+                            drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_CYAN, -1, 0);
                             break;
                     }
                 }
@@ -370,7 +374,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             drawNumber(canvas, mHeartRate, ENDIANNESS_FAKE_HEX, 2, HexNumbers.COLORS_CYAN, -1, -1);
                             break;
                         case SettingsActivity.PREF_VALUE_COMMON_HEX:
-                            drawNumber(canvas, mHeartRate, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_CYAN, -1, -1);
+                            drawNumber(canvas, mHeartRate, endianness, 2, HexNumbers.COLORS_CYAN, -1, -1);
                             break;
                     }
                 }
@@ -416,6 +420,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
                 // Remember that AoD disabled
                 mAoDStartTS = 0;
+                mLastAmbientUpdateX = 0;
+                mLastAmbientUpdateY = 0;
             } else {
                 // Always-on-Display mode
 
@@ -428,20 +434,29 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 if ((prefs.getInt(getString(R.string.pref_anti_burn_in), SettingsActivity.PREF_DEFAULT_ANTI_BURN_IN)
                         == SettingsActivity.PREF_VALUE_ENABLED)
                         && (mAoDStartTS + ANTI_BURN_OUT_TIME < now)) {
-                    // y always random from edge to edge
-                    y = (int)(Math.round(Math.random() * mBackgroundMaxY - 2));
-                    // x is from edge to edge only when y==0 or screen is rectangle
-                    if ((y == 0) || !res.getBoolean(R.bool.is_round))
-                        x = (int) (Math.round(Math.random() * (mBackgroundMaxX - 2))); // from edge to edge
-                    else
-                        x = (int) (Math.round(Math.random())); // from -1 to 1
-                    // Randomly invert
-                    if (Math.round(Math.random()) == 0) x *= -1;
-                    if (Math.round(Math.random()) == 0) y *= -1;
+                    // Do not move time too often
+                    if (mLastAmbientUpdateTS + ANTI_BURN_OUT_TIME_MIN_PERIOD < now) {
+                        // y always random from edge to edge
+                        y = (int) (Math.round(Math.random() * mBackgroundMaxY - 2));
+                        // x is from edge to edge only when y==0 or screen is rectangle
+                        if ((y == 0) || !res.getBoolean(R.bool.is_round))
+                            x = (int) (Math.round(Math.random() * (mBackgroundMaxX - 2))); // from edge to edge
+                        else
+                            x = (int) (Math.round(Math.random())); // from -1 to 1
+                        // Randomly invert
+                        if (Math.round(Math.random()) == 0) x *= -1;
+                        if (Math.round(Math.random()) == 0) y *= -1;
+                        mLastAmbientUpdateX = x;
+                        mLastAmbientUpdateY = y;
+                    } else {
+                        x = mLastAmbientUpdateX;
+                        y = mLastAmbientUpdateY;
+                    }
+                    mLastAmbientUpdateTS = now;
                 }
                 // Draw hours and minutes
                 drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_DARK, 0 + x, 0 + y);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1,HexNumbers.COLORS_DARK, 1 + x, 0 + y);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1, HexNumbers.COLORS_DARK, 1 + x, 0 + y);
             }
         }
 
