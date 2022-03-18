@@ -50,9 +50,6 @@ public class SettingsMenuAdapter extends RecyclerView.Adapter<SettingsMenuAdapte
             holder.menuItemSettingExplanation.setVisibility(View.GONE);
         } else {
                 // Show some explanation
-            holder.menuItemSettingKey.setText("Legend");
-            holder.menuItemSettingValue.setText("");
-
             holder.menuContainer.setOnClickListener(v -> {
                 Intent intent = new Intent(mContext, ExplanationActivity.class);
                 mContext.startActivity(intent);

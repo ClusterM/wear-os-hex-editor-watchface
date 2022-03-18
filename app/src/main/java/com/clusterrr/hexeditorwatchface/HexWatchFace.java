@@ -180,8 +180,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
             // Calculate edges
             if (mBackgroundMinX == 0) mBackgroundMinX = -canvas.getWidth() / 2 / NUMBER_WIDTH;
             if (mBackgroundMaxX == 0) mBackgroundMaxX = canvas.getWidth() / 2 / NUMBER_WIDTH + 1;
-            if (mBackgroundMinY == 0) mBackgroundMinY = -canvas.getWidth() / 2 / NUMBER_V_INTERVAL;
-            if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 1;
+            if (mBackgroundMinY == 0) mBackgroundMinY = -canvas.getWidth() / 2 / NUMBER_V_INTERVAL - 1;
+            if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 2;
 
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
                 // Enable heart rate sensor if need
