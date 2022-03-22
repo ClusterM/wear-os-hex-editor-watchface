@@ -1,6 +1,6 @@
 # Hex Editor Watch Face for Wear OS
 
-This watch face looks like retro hex editors for DOS.
+This watch face looks like retro hex editor for DOS.
 
 ![Preview](/app/src/main/res/drawable-nodpi/icon.png)
 
@@ -22,3 +22,6 @@ This watch face looks like retro hex editors for DOS.
 ![Legend](/app/src/main/res/drawable-nodpi/explanation.png)
 
 You can always look at this hint in the watch face settings.
+
+## Download on Google Play
+https://play.google.com/store/apps/details?id=com.clusterrr.hexeditorwatchface
