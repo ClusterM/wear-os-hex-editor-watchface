@@ -40,7 +40,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(10);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final long ANTI_BURN_IN_TIME = TimeUnit.SECONDS.toMillis(3);
-    private static final long ANTI_BURN_IN_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(15);
+    private static final long ANTI_BURN_IN_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
     private static final int BACKGROUND_Y_OFFSET = -54;
