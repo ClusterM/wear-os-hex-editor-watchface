@@ -9,7 +9,7 @@ android {
         applicationId "com.clusterrr.hexeditorwatchface"
         minSdk 23
         targetSdk 32
-        versionCode 10
+        versionCode 14
         versionName "1.4"
     }
 

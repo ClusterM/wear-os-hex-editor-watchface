@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class HexWatchFace extends CanvasWatchFaceService {
     public static String TAG = "hex_watchface";
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
-    private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(30);
+    private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(10);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final long ANTI_BURN_OUT_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final long ANTI_BURN_OUT_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
@@ -134,6 +134,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
         @Override
         public void onTimeTick() {
             super.onTimeTick();
+            //Log.d(TAG, "Tick");
             invalidate();
         }
 
@@ -141,30 +142,19 @@ public class HexWatchFace extends CanvasWatchFaceService {
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             mAmbient = inAmbientMode;
+            Log.d(TAG, "mAmbient: " + mAmbient);
             mTouchTS = 0;
+            updateSensors();
             updateTimer();
         }
 
-        /**
-         * Captures tap event (and tap type). The {@link WatchFaceService#TAP_TYPE_TAP} case can be
-         * used for implementing specific logic to handle the gesture.
-         */
         @Override
         public void onTapCommand(int tapType, int x, int y, long eventTime) {
-            switch (tapType) {
-                case TAP_TYPE_TOUCH:
-                    // The user has started touching the screen.
-                    //Log.d(TAG, "Touched");
-                    mTouchTS = System.currentTimeMillis();
-                    invalidate();
-                    break;
-                case TAP_TYPE_TOUCH_CANCEL:
-                    // The user has started a different gesture or otherwise cancelled the tap.
-                    //Log.d(TAG, "Touch cancel");
-                    break;
-                case TAP_TYPE_TAP:
-                    //Log.d(TAG, "Tap");
-                    break;
+            if (tapType == TAP_TYPE_TOUCH) {
+                // The user has started touching the screen.
+                Log.d(TAG, "Touched");
+                mTouchTS = System.currentTimeMillis();
+                invalidate();
             }
         }
 
@@ -183,44 +173,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
             if (mBackgroundMinY == 0) mBackgroundMinY = -canvas.getWidth() / 2 / NUMBER_V_INTERVAL - 1;
             if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 2;
 
-            if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
-                // Enable heart rate sensor if need
-                if (mHeartRateSensor == null) {
-                    mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-                    mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
-                }
-                if ((mHeartRateTS + MAX_HEART_RATE_AGE < now) && (mHeartRate != 0)) {
-                    mHeartRate = 0;
-                    Log.d(TAG, "Heart rate is reset to 0");
-                }
-            }
-
-            int todaySteps = 0;
-            if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
-                // Enable step sensor if need
-                if (mStepCountSensor == null) {
-                    mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-                    mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
-                }
-
-                // It's a bit tricky because we can get steps since reboot only
-                int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
-                if (mStepCounter >= 0 && (
-                        // Check if it's new day
-                        (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
-                        || (mStepCounter < todayStepStart)) // or value reset
-                    ) {
-                    // Store new day values
-                    prefs.edit()
-                            .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
-                            .putInt(getString(R.string.pref_today_step_start), mStepCounter)
-                            .apply();
-                    todayStepStart = mStepCounter;
-                }
-                // Calculate today steps
-                todaySteps = Math.max(mStepCounter - todayStepStart, 0);
-            }
-
             // Read battery state
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             Intent batteryIntent = getApplicationContext().registerReceiver(null, filter);
@@ -228,13 +180,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
             // Check if screen was tapped recently
             boolean tapped = mTouchTS + TOUCH_TIME >= now;
-
-            // Endianness
-            int endianness =
-                    (prefs.getInt(getString(R.string.pref_endianness), SettingsActivity.PREF_DEFAULT_ENDIANNESS)
-                    == SettingsActivity.PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN)
-                        ? ENDIANNESS_LITTLE_ENDIAN
-                        : ENDIANNESS_BIG_ENDIAN;
 
             // Calculate current hour - 12 or 24 format
             int hour;
@@ -260,6 +205,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
             if (!mAmbient) {
                 // Interactive mode
+
+                // Endianness
+                int endianness =
+                        (prefs.getInt(getString(R.string.pref_endianness), SettingsActivity.PREF_DEFAULT_ENDIANNESS)
+                                == SettingsActivity.PREF_VALUE_ENDIANNESS_LITTLE_ENDIAN)
+                                ? ENDIANNESS_LITTLE_ENDIAN
+                                : ENDIANNESS_BIG_ENDIAN;
 
                 // Draw blue background
                 canvas.drawBitmap(mBackgroundBitmap,
@@ -322,13 +274,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     drawNumber(canvas, mCalendar.get(Calendar.YEAR), dateSystem, 1, HexNumbers.COLORS_CYAN, 1, -1);
                 }
 
+                // Draw day of the week
                 int dayOfTheWeekMode = prefs.getInt(getString(R.string.pref_day_week), SettingsActivity.PREF_DEFAULT_DAY_OF_THE_WEEK);
                 if (dayOfTheWeekMode != SettingsActivity.PREF_VALUE_HIDE) {
                     int dayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK) - 1;
                             if ((dayOfTheWeek == 0) && (dayOfTheWeekMode == SettingsActivity.PREF_VALUE_DAY_SUNDAY_7)) dayOfTheWeek = 7;
                     drawNumber(canvas, dayOfTheWeek, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
                 }
-
 
                 // Draw battery if enabled
                 int batterySystem = prefs.getInt(getString(R.string.pref_battery), SettingsActivity.PREF_DEFAULT_BATTERY);
@@ -364,6 +316,10 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 // Draw heart rate if enabled
                 int heartRateSystem = prefs.getInt(getString(R.string.pref_heart_rate), SettingsActivity.PREF_DEFAULT_HEART_RATE);
                 if (heartRateSystem != SettingsActivity.PREF_VALUE_HIDE) {
+                    if ((mHeartRateTS + MAX_HEART_RATE_AGE < now) && (mHeartRate != 0)) {
+                        mHeartRate = 0;
+                        Log.i(TAG, "Heart rate is reset to 0");
+                    }
                     if (heartRateSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
                         heartRateSystem = tapped
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
@@ -391,10 +347,10 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     switch (stepsSystem) {
                         default:
                         case SettingsActivity.PREF_VALUE_COMMON_DEC:
-                            drawNumber(canvas, todaySteps, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
+                            drawNumber(canvas, mStepCounter, ENDIANNESS_FAKE_HEX, 3, HexNumbers.COLORS_CYAN, -2, 1);
                             break;
                         case SettingsActivity.PREF_VALUE_COMMON_HEX:
-                            drawNumber(canvas, todaySteps, endianness, 2, HexNumbers.COLORS_CYAN, -1, 1);
+                            drawNumber(canvas, mStepCounter, endianness, 2, HexNumbers.COLORS_CYAN, -1, 1);
                             break;
                     }
                 }
@@ -460,7 +416,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
             }
         }
 
-
         private void drawNumber(Canvas canvas, int number, int endianness, int size, int numberColor,
                                    float left, float top)
         {
@@ -490,8 +445,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
                                      float left, float top)
         {
             drawDigitAtPoint(canvas, number, numberColor,
-                    canvas.getWidth()/2 + (left - 1) * NUMBER_WIDTH,
-                    canvas.getHeight()/2 + top * NUMBER_V_INTERVAL - 24);
+                    canvas.getWidth() / 2 + (left - 1) * NUMBER_WIDTH,
+                    canvas.getHeight() / 2 + top * NUMBER_V_INTERVAL - 24);
         }
 
         private void drawDigitAtPoint(Canvas canvas, int number, int numberColor,
@@ -508,6 +463,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 registerReceiver();
                 /* Update time zone in case it changed while we weren"t visible. */
                 mCalendar.setTimeZone(TimeZone.getDefault());
+                updateSensors();
                 invalidate();
             } else {
                 unregisterReceiver();
@@ -565,6 +521,47 @@ public class HexWatchFace extends CanvasWatchFaceService {
             }
         }
 
+
+        private void updateSensors()
+        {
+            // Enable disable sensors
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+
+            if ((ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) &&
+                    (prefs.getInt(getString(R.string.pref_heart_rate), SettingsActivity.PREF_DEFAULT_HEART_RATE) != SettingsActivity.PREF_VALUE_HIDE)
+                    /* && !mAmbient && isVisible() */) {
+                // Enable heart rate sensor if need
+                if (mHeartRateSensor == null) {
+                    mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
+                    mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                    Log.i(TAG, "Heart rate sensor enabled");
+                }
+            } else if (mHeartRateSensor != null) {
+                mSensorManager.unregisterListener(this, mHeartRateSensor);
+                mHeartRateSensor = null;
+                mHeartRate = 0;
+                Log.i(TAG, "Heart rate sensor disabled");
+            }
+
+            if ((ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) &&
+                    (prefs.getInt(getString(R.string.pref_steps), SettingsActivity.PREF_DEFAULT_STEPS) != SettingsActivity.PREF_VALUE_HIDE)
+                    /* && !mAmbient && isVisible() */)
+            {
+                // Enable step sensor if need
+                if (mStepCountSensor == null) {
+                    mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+                    mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                    Log.i(TAG, "Step sensor enabled");
+                }
+            } else if (mStepCountSensor != null)
+            {
+                // Disable step sensor
+                mSensorManager.unregisterListener(this, mStepCountSensor);
+                mStepCountSensor = null;
+                Log.i(TAG, "Step sensor Disabled");
+            }
+        }
+
         @Override
         public void onSensorChanged(SensorEvent event) {
             //Log.d(TAG, "New sensor data: " + event.sensor.getType());
@@ -577,8 +574,25 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                     break;
                 case Sensor.TYPE_STEP_COUNTER:
-                    mStepCounter = (int)event.values[0];
-                    //Log.d(TAG, "Steps: " + mStepCounter);
+                    SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+                    int steps = (int)event.values[0];
+                    // It's a bit tricky because we can get steps since reboot only
+                    int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
+                    if (steps >= 0 && (
+                            // Check if it's new day
+                            (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
+                                    || (steps < todayStepStart)) // or value reset
+                    ) {
+                        // Store new day values
+                        prefs.edit()
+                                .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
+                                .putInt(getString(R.string.pref_today_step_start), steps)
+                                .apply();
+                        todayStepStart = steps;
+                    }
+                    // Calculate today steps
+                    mStepCounter = Math.max(steps - todayStepStart, 0);
+                    Log.d(TAG, "Steps: " + steps + ", today: " + mStepCounter);
                     break;
             }
         }
