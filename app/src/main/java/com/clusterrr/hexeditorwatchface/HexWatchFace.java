@@ -22,7 +22,6 @@ import android.os.Handler;
 import android.os.Message;
 
 import android.support.wearable.watchface.CanvasWatchFaceService;
-import android.support.wearable.watchface.WatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -40,8 +39,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(10);
     private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
-    private static final long ANTI_BURN_OUT_TIME = TimeUnit.SECONDS.toMillis(3);
-    private static final long ANTI_BURN_OUT_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
+    private static final long ANTI_BURN_IN_TIME = TimeUnit.SECONDS.toMillis(3);
+    private static final long ANTI_BURN_IN_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(15);
     private static final int NUMBER_WIDTH = 78;
     private static final int NUMBER_V_INTERVAL = 56;
     private static final int BACKGROUND_Y_OFFSET = -54;
@@ -389,26 +388,29 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 int y = 0;
                 if ((prefs.getInt(getString(R.string.pref_anti_burn_in), SettingsActivity.PREF_DEFAULT_ANTI_BURN_IN)
                         == SettingsActivity.PREF_VALUE_ENABLED)
-                        && (mAoDStartTS + ANTI_BURN_OUT_TIME < now)) {
+                        && (mAoDStartTS + ANTI_BURN_IN_TIME < now)) {
                     // Do not move time too often
-                    if (mLastAmbientUpdateTS + ANTI_BURN_OUT_TIME_MIN_PERIOD < now) {
+                    if (mLastAmbientUpdateTS + ANTI_BURN_IN_TIME_MIN_PERIOD < now) {
                         // y always random from edge to edge
-                        y = (int) (Math.round(Math.random() * mBackgroundMaxY - 2));
-                        // x is from edge to edge only when y==0 or screen is rectangle
-                        if ((y == 0) || !res.getBoolean(R.bool.is_round))
-                            x = (int) (Math.round(Math.random() * (mBackgroundMaxX - 2))); // from edge to edge
-                        else
-                            x = (int) (Math.round(Math.random())); // from -1 to 1
-                        // Randomly invert
-                        if (Math.round(Math.random()) == 0) x *= -1;
+                        y = (int) (Math.round(Math.random() * Math.max(1,mBackgroundMaxY - 3)));
                         if (Math.round(Math.random()) == 0) y *= -1;
+                        // x is from edge to edge only when y==0 or screen is rectangle
+                        Log.d(TAG, "mBackgroundMaxY="+mBackgroundMaxY+", anti_burn_in_y=" + y);
+                        if ((y == 0) || !res.getBoolean(R.bool.is_round))
+                            x = (int) (Math.round(Math.random() * Math.max(1,mBackgroundMaxX - 2))); // from edge to edge
+                        else if ((y > -(mBackgroundMaxY - 3) && (y < mBackgroundMaxY - 3)))
+                            x = (int) (Math.round(Math.random())); // from -1 to 1
+                        else
+                            x = 0; // center only
+                        if (Math.round(Math.random()) == 0) x *= -1;
+                        Log.d(TAG, "mBackgroundMaxX="+mBackgroundMaxX+", anti_burn_in_x=" + x);
                         mLastAmbientUpdateX = x;
                         mLastAmbientUpdateY = y;
+                        mLastAmbientUpdateTS = now;
                     } else {
                         x = mLastAmbientUpdateX;
                         y = mLastAmbientUpdateY;
                     }
-                    mLastAmbientUpdateTS = now;
                 }
                 // Draw hours and minutes
                 drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_DARK, 0 + x, 0 + y);
