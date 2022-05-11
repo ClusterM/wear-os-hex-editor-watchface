@@ -577,7 +577,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     break;
                 case Sensor.TYPE_STEP_COUNTER:
                     SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
-                    int steps = (int)event.values[0];
+                    int steps;
+                    try {
+                        steps = (int) event.values[0];
+                    }
+                    catch (Exception ex) {
+                        return;
+                    }
                     // It's a bit tricky because we can get steps since reboot only
                     int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
                     if (steps >= 0 && (
@@ -590,10 +596,29 @@ public class HexWatchFace extends CanvasWatchFaceService {
                                 .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
                                 .putInt(getString(R.string.pref_today_step_start), steps)
                                 .apply();
-                        todayStepStart = steps;
+                        steps = 0;
+                    } else {
+                        // Calculate today steps
+                        steps = Math.max(steps - todayStepStart, 0);
+                        int last = prefs.getInt(getString(R.string.pref_today_step_last), 0);
+                        if (steps < last) {
+                            // Reboot?
+                            Log.d(TAG, "Reboot? Recalculate todayStepStart from " + todayStepStart + " to todayStepStart-"+last);
+                            todayStepStart -= last;
+                            prefs.edit()
+                                    .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
+                                    .putInt(getString(R.string.pref_today_step_start), steps)
+                                    .apply();
+                            steps = Math.max(steps - todayStepStart, 0);
+                        }
                     }
-                    // Calculate today steps
-                    mStepCounter = Math.max(steps - todayStepStart, 0);
+                    if (steps / 10 != mStepCounter / 10) {
+                        // Save last value every 10 steps
+                        prefs.edit()
+                                .putInt(getString(R.string.pref_today_step_last), steps)
+                                .apply();
+                    }
+                    mStepCounter = steps;
                     Log.d(TAG, "Steps: " + steps + ", today: " + mStepCounter);
                     break;
             }
@@ -601,7 +626,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int i) {
-
         }
     }
 }
