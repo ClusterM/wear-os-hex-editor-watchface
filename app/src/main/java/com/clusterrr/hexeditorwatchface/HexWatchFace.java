@@ -39,7 +39,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(10);
     private static final long TOUCH_DEC_DURATION = TimeUnit.SECONDS.toMillis(5);
-    private static final long TOUCH_LEGEND_DURATION = TimeUnit.SECONDS.toMillis(2);
+    private static final long TOUCH_LEGEND_DURATION = 2500;
     private static final long TOUCH_INTERVAL = 500;
     private static final long ANTI_BURN_IN_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final long ANTI_BURN_IN_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
