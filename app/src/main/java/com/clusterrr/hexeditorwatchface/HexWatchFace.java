@@ -38,7 +38,9 @@ public class HexWatchFace extends CanvasWatchFaceService {
     public static String TAG = "hex_watchface";
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
     private static final long MAX_HEART_RATE_AGE = TimeUnit.SECONDS.toMillis(10);
-    private static final long TOUCH_TIME = TimeUnit.SECONDS.toMillis(3);
+    private static final long TOUCH_DEC_DURATION = TimeUnit.SECONDS.toMillis(5);
+    private static final long TOUCH_LEGEND_DURATION = TimeUnit.SECONDS.toMillis(2);
+    private static final long TOUCH_INTERVAL = 500;
     private static final long ANTI_BURN_IN_TIME = TimeUnit.SECONDS.toMillis(3);
     private static final long ANTI_BURN_IN_TIME_MIN_PERIOD = TimeUnit.SECONDS.toMillis(58);
     private static final int NUMBER_WIDTH = 78;
@@ -47,6 +49,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final int ENDIANNESS_LITTLE_ENDIAN = 0;
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
+    private static final int STEPS_SAVE_INTERVAL = 10;
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
@@ -89,11 +92,20 @@ public class HexWatchFace extends CanvasWatchFaceService {
         private Bitmap mBackgroundBitmap;
         private Bitmap mVignettingBitmap;
         private Bitmap mBarsBitmap;
+        private Bitmap mLegendSecond;
+        private Bitmap mLegendDate;
+        private Bitmap mLegendDayOfWeek;
+        private Bitmap mLegendSteps;
+        private Bitmap mLegendStepsHex;
+        private Bitmap mLegendBattery;
+        private Bitmap mLegendBatteryHex;
+        private Bitmap mLegendHeartRate;
         private HexNumbers mNumbers;
         private int mHeartRate = 0;
         private long mHeartRateTS = 0;
-        private int mStepCounter = -1;
+        private int mStepCounter = 0;
         private long mTouchTS = 0;
+        private int mTouchCount = 0;
         private SensorManager mSensorManager = null;
         private Sensor mHeartRateSensor = null;
         private Sensor mStepCountSensor = null;
@@ -111,17 +123,31 @@ public class HexWatchFace extends CanvasWatchFaceService {
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
+            Resources res = getResources();
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+
             setWatchFaceStyle(new WatchFaceStyle.Builder(HexWatchFace.this)
                     .setAcceptsTapEvents(true)
                     .build());
 
             mCalendar = Calendar.getInstance();
-            Resources res = getResources();
             mBackgroundBitmap = BitmapFactory.decodeResource(res, R.drawable.bg_empty);
             mVignettingBitmap = BitmapFactory.decodeResource(res, R.drawable.vignetting);
             mBarsBitmap = BitmapFactory.decodeResource(res, R.drawable.bars);
+            mLegendSecond = BitmapFactory.decodeResource(res, R.drawable.legend_second);
+            mLegendDate = BitmapFactory.decodeResource(res, R.drawable.legend_date);
+            mLegendDayOfWeek = BitmapFactory.decodeResource(res, R.drawable.legend_day_week);
+            mLegendSteps = BitmapFactory.decodeResource(res, R.drawable.legend_steps);
+            mLegendStepsHex = BitmapFactory.decodeResource(res, R.drawable.legend_steps_hex);
+            mLegendBattery = BitmapFactory.decodeResource(res, R.drawable.legend_battery);
+            mLegendBatteryHex = BitmapFactory.decodeResource(res, R.drawable.legend_battery_hex);
+            mLegendHeartRate = BitmapFactory.decodeResource(res, R.drawable.legend_heart_rate);
             mNumbers = new HexNumbers(res);
             mSensorManager = ((SensorManager)getSystemService(SENSOR_SERVICE));
+
+            if (mCalendar.get(Calendar.DAY_OF_MONTH) == prefs.getInt(getString(R.string.pref_steps_day), 0)) {
+                mStepCounter = prefs.getInt(getString(R.string.pref_today_step_last), 0);
+            }
         }
 
         @Override
@@ -151,7 +177,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
         public void onTapCommand(int tapType, int x, int y, long eventTime) {
             if (tapType == TAP_TYPE_TOUCH) {
                 // The user has started touching the screen.
-                Log.d(TAG, "Touched");
+                if (System.currentTimeMillis() - mTouchTS <= TOUCH_INTERVAL) {
+                    mTouchCount++;
+                    if (mTouchCount > 3) mTouchCount = 1;
+                } else {
+                    mTouchCount = 1;
+                }
+                Log.d(TAG, "Touches: " + mTouchCount);
                 mTouchTS = System.currentTimeMillis();
                 invalidate();
             }
@@ -178,7 +210,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
             int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
 
             // Check if screen was tapped recently
-            boolean tapped = mTouchTS + TOUCH_TIME >= now;
+            boolean tappedDec = mTouchTS + TOUCH_DEC_DURATION >= now;
+            boolean tappedLegend = (mTouchTS + TOUCH_LEGEND_DURATION >= now) && (mTouchCount == 3);
 
             // Calculate current hour - 12 or 24 format
             int hour;
@@ -189,7 +222,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 hour = mCalendar.get(Calendar.HOUR_OF_DAY);
             int timeSystem = prefs.getInt(getString(R.string.pref_time_system), SettingsActivity.PREF_DEFAULT_TIME_SYSTEM);
             if (timeSystem == SettingsActivity.PREF_VALUE_TIME_DEC_ON_TAP)
-                timeSystem = tapped
+                timeSystem = tappedDec
                         ? SettingsActivity.PREF_VALUE_TIME_DEC
                         : SettingsActivity.PREF_VALUE_TIME_HEX;
             switch (timeSystem) {
@@ -245,17 +278,34 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                 }
 
+                // Draw vertical bars if need
+                if (tappedLegend) {
+                    if (prefs.getInt(getString(R.string.pref_bars), SettingsActivity.PREF_DEFAULT_BARS)
+                            == SettingsActivity.PREF_VALUE_BARS_SHOW) {
+                        canvas.drawBitmap(mBarsBitmap,
+                                canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
+                                canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_Y_OFFSET,
+                                null);
+                    }
+                }
+
                 // Draw hours, minutes and seconds
                 drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_WHITE, 0, 0);
                 drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1,HexNumbers.COLORS_WHITE, 1, 0);
                 drawNumber(canvas, mCalendar.get(Calendar.SECOND), timeSystem, 1,HexNumbers.COLORS_CYAN, 2, 0);
+                if (tappedLegend) {
+                    canvas.drawBitmap(mLegendSecond,
+                            canvas.getWidth() / 2 - mLegendSecond.getWidth() / 2,
+                            canvas.getHeight() / 2 - mLegendSecond.getHeight() / 2,
+                            null);
+                }
 
                 // Draw date if enabled
                 int dateSystem = prefs.getInt(getString(R.string.pref_date), SettingsActivity.PREF_DEFAULT_DATE);
                 if (dateSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     // Check tap mode
                     if (dateSystem  == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
-                        dateSystem = tapped
+                        dateSystem = tappedDec
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
                                 : SettingsActivity.PREF_VALUE_COMMON_HEX;
                     // Check system
@@ -271,6 +321,12 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     drawNumber(canvas, mCalendar.get(Calendar.DAY_OF_MONTH), dateSystem, 1, HexNumbers.COLORS_CYAN, 2, 1);
                     drawNumber(canvas, mCalendar.get(Calendar.MONTH) + 1, dateSystem, 1, HexNumbers.COLORS_CYAN, 2, -1);
                     drawNumber(canvas, mCalendar.get(Calendar.YEAR), dateSystem, 1, HexNumbers.COLORS_CYAN, 1, -1);
+                    if (tappedLegend) {
+                        canvas.drawBitmap(mLegendDate,
+                                canvas.getWidth() / 2 - mLegendDate.getWidth() / 2,
+                                canvas.getHeight() / 2 - mLegendDate.getHeight() / 2,
+                                null);
+                    }
                 }
 
                 // Draw day of the week
@@ -279,6 +335,12 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     int dayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK) - 1;
                             if ((dayOfTheWeek == 0) && (dayOfTheWeekMode == SettingsActivity.PREF_VALUE_DAY_SUNDAY_7)) dayOfTheWeek = 7;
                     drawNumber(canvas, dayOfTheWeek, ENDIANNESS_FAKE_HEX, 1, HexNumbers.COLORS_CYAN, 1, 1);
+                    if (tappedLegend) {
+                        canvas.drawBitmap(mLegendDayOfWeek,
+                                canvas.getWidth() / 2 - mLegendDayOfWeek.getWidth() / 2,
+                                canvas.getHeight() / 2 - mLegendDayOfWeek.getHeight() / 2,
+                                null);
+                    }
                 }
 
                 // Draw battery if enabled
@@ -287,12 +349,12 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     // Check tap mode
                     switch(batterySystem) {
                         case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF_TAP:
-                            batterySystem = tapped
+                            batterySystem = tappedDec
                                     ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
                                     : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_FF;
                             break;
                         case SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64_TAP:
-                            batterySystem = tapped
+                            batterySystem = tappedDec
                                     ? SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100
                                     : SettingsActivity.PREF_VALUE_BATTERY_HEX_0_64;
                             break;
@@ -310,6 +372,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             drawNumber(canvas, battery * 255 / 100, ENDIANNESS_LITTLE_ENDIAN, 1, HexNumbers.COLORS_CYAN, -1, 0);
                             break;
                     }
+                    if (tappedLegend) {
+                        Bitmap batLegend = batterySystem == SettingsActivity.PREF_VALUE_BATTERY_DEC_0_100 ? mLegendBattery : mLegendBatteryHex;
+                        canvas.drawBitmap(batLegend,
+                                canvas.getWidth() / 2 - batLegend.getWidth() / 2,
+                                canvas.getHeight() / 2 - batLegend.getHeight() / 2,
+                                null);
+                    }
                 }
 
                 // Draw heart rate if enabled
@@ -320,7 +389,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                         Log.i(TAG, "Heart rate is reset to 0");
                     }
                     if (heartRateSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
-                        heartRateSystem = tapped
+                        heartRateSystem = tappedDec
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
                                 : SettingsActivity.PREF_VALUE_COMMON_HEX;
                     switch (heartRateSystem) {
@@ -332,6 +401,12 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             drawNumber(canvas, mHeartRate, endianness, 2, HexNumbers.COLORS_CYAN, -1, -1);
                             break;
                     }
+                    if (tappedLegend) {
+                        canvas.drawBitmap(mLegendHeartRate,
+                                canvas.getWidth() / 2 - mLegendHeartRate.getWidth() / 2,
+                                canvas.getHeight() / 2 - mLegendHeartRate.getHeight() / 2,
+                                null);
+                    }
                 }
 
                 // Draw steps if enabled
@@ -339,7 +414,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 if (stepsSystem != SettingsActivity.PREF_VALUE_HIDE) {
                     // Check tap mode
                     if (stepsSystem == SettingsActivity.PREF_VALUE_COMMON_DEC_ON_TAP)
-                        stepsSystem = tapped
+                        stepsSystem = tappedDec
                                 ? SettingsActivity.PREF_VALUE_COMMON_DEC
                                 : SettingsActivity.PREF_VALUE_COMMON_HEX;
                     // Check system
@@ -352,18 +427,27 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             drawNumber(canvas, mStepCounter, endianness, 2, HexNumbers.COLORS_CYAN, -1, 1);
                             break;
                     }
+                    if (tappedLegend) {
+                        Bitmap stepsLegend = stepsSystem == SettingsActivity.PREF_VALUE_COMMON_DEC ? mLegendSteps : mLegendStepsHex;
+                        canvas.drawBitmap(stepsLegend,
+                                canvas.getWidth() / 2 - stepsLegend.getWidth() / 2,
+                                canvas.getHeight() / 2 - stepsLegend.getHeight() / 2,
+                                null);
+                    }
                 }
 
-                // Draw vertical bars if enabled
-                if (prefs.getInt(getString(R.string.pref_bars), SettingsActivity.PREF_DEFAULT_BARS)
-                        == SettingsActivity.PREF_VALUE_BARS_SHOW) {
-                    canvas.drawBitmap(mBarsBitmap,
-                            canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
-                            canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_Y_OFFSET,
-                            null);
+                // Draw vertical bars if need
+                if (!tappedLegend) {
+                    if (prefs.getInt(getString(R.string.pref_bars), SettingsActivity.PREF_DEFAULT_BARS)
+                            == SettingsActivity.PREF_VALUE_BARS_SHOW) {
+                        canvas.drawBitmap(mBarsBitmap,
+                                canvas.getWidth() / 2 - mBarsBitmap.getWidth() / 2,
+                                canvas.getHeight() / 2 - mBarsBitmap.getHeight() / 2 + BACKGROUND_Y_OFFSET,
+                                null);
+                    }
                 }
 
-                // Draw vignetting if enabled
+                // Draw vignetting if need
                 if (prefs.getInt(getString(R.string.pref_vignetting), res.getInteger(R.integer.default_vignetting))
                     == SettingsActivity.PREF_VALUE_ENABLED) {
                     // Scale it to the screen size
@@ -582,7 +666,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                         steps = (int) event.values[0];
                     }
                     catch (Exception ex) {
-                        return;
+                        steps = 0;
                     }
                     // It's a bit tricky because we can get steps since reboot only
                     int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
@@ -612,7 +696,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             steps = Math.max(steps - todayStepStart, 0);
                         }
                     }
-                    if (steps / 10 != mStepCounter / 10) {
+                    if (steps / STEPS_SAVE_INTERVAL != mStepCounter / STEPS_SAVE_INTERVAL) {
                         // Save last value every 10 steps
                         prefs.edit()
                                 .putInt(getString(R.string.pref_today_step_last), steps)

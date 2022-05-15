@@ -18,4 +18,5 @@
     <string name="pref_bars">bars</string>
     <string name="pref_vignetting">vignetting</string>
     <string name="pref_anti_burn_in">anti_burn_in</string>
+    <string name="legend_hint">Tap the clock screen three times to show the legend</string>
 </resources>

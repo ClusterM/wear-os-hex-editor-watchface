@@ -76,7 +76,7 @@
             android:theme="@style/MyMaterialTheme">
         </activity>
         <activity
-            android:name=".ExplanationActivity"
+            android:name=".LegendActivity"
             android:label="Explanation"
             android:theme="@style/MyMaterialTheme">
         </activity>
