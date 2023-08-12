@@ -19,6 +19,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    namespace 'com.clusterrr.hexeditorwatchface'
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
