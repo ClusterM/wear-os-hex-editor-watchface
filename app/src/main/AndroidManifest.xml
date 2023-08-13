@@ -23,10 +23,6 @@
         android:supportsRtl="true"
         android:icon="@drawable/icon">
 
-        <property
-            android:name="com.google.wear.watchface.format.version"
-            android:value="1" />
-
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
