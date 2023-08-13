@@ -27,7 +27,7 @@ You can always see the hint by triple tap on the screen.
 https://play.google.com/store/apps/details?id=com.clusterrr.hexeditorwatchface
 
 ## Contacts
-* My site (Russian): https://clusterrr.com
-* Email: clusterrr@clusterrr.com
+* My site (Russian): https://cluster.wtf
+* Email: cluster@cluster.wtf
 * Telegram: https://t.me/Cluster_M
 * Donations: https://www.donationalerts.com/r/clustermeerkat
