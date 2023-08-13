@@ -19,9 +19,15 @@ This watch face looks like retro hex editor for DOS.
 * Always-on-Display anti-burn-in protection
 
 ## Legend
-![Legend](/app/src/main/res/drawable-nodpi/explanation.png)
+![Legend](https://user-images.githubusercontent.com/4236181/169558169-605c51d4-6c8f-4f58-98f3-70c208ddfcac.png)
 
-You can always look at this hint in the watch face settings.
+You can always see the hint by triple tap on the screen.
 
 ## Download on Google Play
 https://play.google.com/store/apps/details?id=com.clusterrr.hexeditorwatchface
+
+## Contacts
+* My site (Russian): https://clusterrr.com
+* Email: clusterrr@clusterrr.com
+* Telegram: https://t.me/Cluster_M
+* Donations: https://www.donationalerts.com/r/clustermeerkat
