@@ -1,7 +1,5 @@
 package com.clusterrr.hexeditorwatchface;
 
-import static kotlin.jvm.internal.Reflection.createKotlinClass;
-
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -19,49 +17,37 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.health.connect.HealthConnectException;
-import android.health.connect.ReadRecordsResponse;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Message;
-
-import androidx.annotation.NonNull;
-import androidx.health.services.client.HealthServices;
-import androidx.health.services.client.HealthServicesClient;
-import androidx.health.services.client.PassiveListenerCallback;
-import androidx.health.services.client.PassiveMonitoringClient;
-import androidx.health.services.client.data.DataPoint;
-import androidx.health.services.client.data.DataPointContainer;
-import androidx.health.services.client.data.DataType;
-import androidx.health.services.client.data.DeltaDataType;
-import androidx.health.services.client.data.ExerciseType;
-import androidx.health.services.client.data.IntervalDataPoint;
-import androidx.health.services.client.data.PassiveListenerConfig;
-import androidx.health.services.client.data.PassiveMonitoringCapabilities;
-import androidx.health.services.client.data.UserActivityInfo;
-import androidx.health.services.client.data.UserActivityState;
-
 import android.os.SystemClock;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
-
-import com.google.common.util.concurrent.ListenableFuture;
+import androidx.health.services.client.HealthServices;
+import androidx.health.services.client.HealthServicesClient;
+import androidx.health.services.client.PassiveListenerCallback;
+import androidx.health.services.client.PassiveMonitoringClient;
+import androidx.health.services.client.data.DataPointContainer;
+import androidx.health.services.client.data.DataType;
+import androidx.health.services.client.data.IntervalDataPoint;
+import androidx.health.services.client.data.PassiveListenerConfig;
 
 import java.lang.ref.WeakReference;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("deprecation")
 public class HexWatchFace extends CanvasWatchFaceService {
     public static String TAG = "hex_watchface";
     private static final long INTERACTIVE_UPDATE_RATE = TimeUnit.SECONDS.toMillis(1);
@@ -77,7 +63,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
     private static final int ENDIANNESS_LITTLE_ENDIAN = 0;
     private static final int ENDIANNESS_BIG_ENDIAN = 1;
     private static final int ENDIANNESS_FAKE_HEX = 2;
-    private static final int STEPS_SAVE_INTERVAL = 10;
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
@@ -98,13 +83,13 @@ public class HexWatchFace extends CanvasWatchFaceService {
         }
 
         @Override
-        public void handleMessage(Message msg) {
+        public void handleMessage(@NonNull Message msg) {
             HexWatchFace.Engine engine = mWeakReference.get();
             if (engine != null) engine.handleUpdateTimeMessage();
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements SensorEventListener, PassiveListenerCallback {
+    private class Engine extends CanvasWatchFaceService.Engine {
         /* Handler to update the time once a second in interactive mode. */
         private final Handler mUpdateTimeHandler = new EngineHandler(this);
         private Calendar mCalendar;
@@ -152,7 +137,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
             super.onCreate(holder);
 
             Resources res = getResources();
-            SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(HexWatchFace.this)
                     .setAcceptsTapEvents(true)
@@ -229,9 +213,11 @@ public class HexWatchFace extends CanvasWatchFaceService {
             if (mBackgroundMaxY == 0) mBackgroundMaxY = canvas.getWidth() / 2 / NUMBER_V_INTERVAL + 2;
 
             // Read battery state
+            int battery = 0;
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             Intent batteryIntent = getApplicationContext().registerReceiver(null, filter);
-            int battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+            if (batteryIntent != null)
+                battery = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
 
             // Check if screen was tapped recently
             boolean tappedDec = mTouchTS + TOUCH_DEC_DURATION >= now;
@@ -508,8 +494,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             x = (int) (Math.round(Math.random() * Math.max(1,mBackgroundMaxX - 2))); // from edge to edge
                         else if ((y > -(mBackgroundMaxY - 3) && (y < mBackgroundMaxY - 3)))
                             x = (int) (Math.round(Math.random())); // from -1 to 1
-                        else
-                            x = 0; // center only
                         if (Math.round(Math.random()) == 0) x *= -1;
                         Log.d(TAG, "mBackgroundMaxX="+mBackgroundMaxX+", anti_burn_in_x=" + x);
                         mLastAmbientUpdateX = x;
@@ -521,8 +505,8 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     }
                 }
                 // Draw hours and minutes
-                drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_DARK, 0 + x, 0 + y);
-                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1, HexNumbers.COLORS_DARK, 1 + x, 0 + y);
+                drawNumber(canvas, hour, timeSystem, 1, HexNumbers.COLORS_DARK, x, y);
+                drawNumber(canvas, mCalendar.get(Calendar.MINUTE), timeSystem, 1, HexNumbers.COLORS_DARK, 1 + x, y);
             }
         }
 
@@ -571,7 +555,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
 
             if (visible) {
                 registerReceiver();
-                /* Update time zone in case it changed while we weren"t visible. */
+                /* Update time zone in case it changed while we weren't visible. */
                 mCalendar.setTimeZone(TimeZone.getDefault());
                 updateSensors();
                 invalidate();
@@ -631,10 +615,9 @@ public class HexWatchFace extends CanvasWatchFaceService {
             }
         }
 
-
         private void updateSensors()
         {
-            // Enable disable sensors
+            // Enable/disable sensors
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
             if ((ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) &&
@@ -643,11 +626,11 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 // Enable heart rate sensor if need
                 if (mHeartRateSensor == null) {
                     mHeartRateSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-                    mSensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                    mSensorManager.registerListener(mHeartRateListener, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
                     Log.i(TAG, "Heart rate sensor enabled");
                 }
             } else if (mHeartRateSensor != null) {
-                mSensorManager.unregisterListener(this, mHeartRateSensor);
+                mSensorManager.unregisterListener(mHeartRateListener, mHeartRateSensor);
                 mHeartRateSensor = null;
                 mHeartRate = 0;
                 Log.i(TAG, "Heart rate sensor disabled");
@@ -668,7 +651,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
                             //.setShouldUserActivityInfoBeRequested(true)
                             .setDataTypes(dataTypes)
                             .build();
-                    mStepPassiveMonitoringClient.setPassiveListenerCallback(passiveListenerConfig, this);
+                    mStepPassiveMonitoringClient.setPassiveListenerCallback(passiveListenerConfig, mStepListener);
                     Log.i(TAG, "Step sensor enabled");
                 }
             } else if (mStepPassiveMonitoringClient != null)
@@ -676,75 +659,79 @@ public class HexWatchFace extends CanvasWatchFaceService {
                 // Disable step sensor
                 mStepPassiveMonitoringClient.clearPassiveListenerCallbackAsync();
                 mStepPassiveMonitoringClient = null;
-                Log.i(TAG, "Step sensor Disabled");
+                Log.i(TAG, "Step sensor disabled");
             }
         }
 
-        // Heart rate receiver
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            //Log.d(TAG, "New sensor data: " + event.sensor.getType());
-            switch (event.sensor.getType()) {
-                case Sensor.TYPE_HEART_RATE:
-                    if ((int)event.values[0] != 0) {
+        /* Heart rate listener */
+        private final SensorEventListener mHeartRateListener = new SensorEventListener()
+        {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
+                    if ((int) event.values[0] != 0) {
                         mHeartRate = (int) event.values[0];
                         mHeartRateTS = System.currentTimeMillis();
                         //Log.d(TAG, "Heart rate: " + mHeartRate);
                     }
-                    break;
-            }
-        }
-
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int i) {
-            // unused
-        }
-
-        // Steps receiver
-        @Override
-        public void onNewDataPointsReceived(@NonNull DataPointContainer dataPoints) {
-            PassiveListenerCallback.super.onNewDataPointsReceived(dataPoints);
-
-            List<IntervalDataPoint<Long>> dps = dataPoints.getData(DataType.STEPS_DAILY);
-            Instant bootInstant = Instant.ofEpochMilli(System.currentTimeMillis() - SystemClock.elapsedRealtime());
-
-            long ts = 0;
-            long steps = 0;
-
-            if (!dps.isEmpty()) {
-                for (IntervalDataPoint<Long> dp : dps)
-                {
-                    Instant endTime = dp.getEndInstant(bootInstant);
-                    if (endTime.toEpochMilli() > ts)
-                    {
-                        ts = endTime.toEpochMilli();
-                        steps = dp.getValue();
-                    }
                 }
             }
 
-            mStepCounter = (int)steps;
-            Log.d(TAG, "Today steps: " + mStepCounter);
-        }
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+                // unused for heart rate
+            }
+        };
 
-        @Override
-        public void onRegistered() {
-            PassiveListenerCallback.super.onRegistered();
-            Log.d(TAG, "Step counter sensor registered");
-        }
+        /* Step counter listener */
+        private final PassiveListenerCallback mStepListener = new PassiveListenerCallback()
+        {
+            @Override
+            public void onNewDataPointsReceived(@NonNull DataPointContainer dataPoints) {
+                PassiveListenerCallback.super.onNewDataPointsReceived(dataPoints);
 
-        @Override
-        public void onPermissionLost() {
-            PassiveListenerCallback.super.onPermissionLost();
-            mStepPassiveMonitoringClient = null;
-            Log.e(TAG, "Step counter permission lost");
-        }
+                List<IntervalDataPoint<Long>> dps = dataPoints.getData(DataType.STEPS_DAILY);
+                Instant bootInstant = Instant.ofEpochMilli(System.currentTimeMillis() - SystemClock.elapsedRealtime());
 
-        @Override
-        public void onRegistrationFailed(@NonNull Throwable throwable) {
-            PassiveListenerCallback.super.onRegistrationFailed(throwable);
-            mStepPassiveMonitoringClient = null;
-            Log.d(TAG, "Step counter sensor unregistered");
-        }
-    }
+                long ts = 0;
+                long steps = 0;
+
+                if (!dps.isEmpty()) {
+                    /* Search for last record */
+                    for (IntervalDataPoint<Long> dp : dps)
+                    {
+                        Instant endTime = dp.getEndInstant(bootInstant);
+                        if (endTime.toEpochMilli() > ts)
+                        {
+                            ts = endTime.toEpochMilli();
+                            steps = dp.getValue();
+                        }
+                    }
+                }
+
+                mStepCounter = (int)steps;
+                // Log.d(TAG, "Today steps: " + mStepCounter);
+            }
+
+            @Override
+            public void onRegistered() {
+                PassiveListenerCallback.super.onRegistered();
+                Log.d(TAG, "Step counter sensor registered");
+            }
+
+            @Override
+            public void onPermissionLost() {
+                PassiveListenerCallback.super.onPermissionLost();
+                mStepPassiveMonitoringClient = null;
+                Log.e(TAG, "Step counter permission lost");
+            }
+
+            @Override
+            public void onRegistrationFailed(@NonNull Throwable throwable) {
+                PassiveListenerCallback.super.onRegistrationFailed(throwable);
+                mStepPassiveMonitoringClient = null;
+                Log.d(TAG, "Step counter sensor unregistered");
+            }
+        };
+   }
 }

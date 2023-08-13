@@ -77,7 +77,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int PREF_DEFAULT_BACKGROUND = PREF_VALUE_BACKGROUND_ZEROS;
     public static final int PREF_DEFAULT_BARS = PREF_VALUE_BARS_SHOW;
     //public static final int PREF_DEFAULT_VIGNETTING = PREF_VALUE_ENABLED;
-    public static final int PREF_DEFAULT_ANTI_BURN_IN = PREF_VALUE_DISABLED;;
+    public static final int PREF_DEFAULT_ANTI_BURN_IN = PREF_VALUE_DISABLED;
 
     private Setting[] mSettings;
     SettingsMenuAdapter mSettingsMenuAdapter;
