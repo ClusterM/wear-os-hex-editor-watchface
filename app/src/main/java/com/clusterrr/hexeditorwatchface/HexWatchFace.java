@@ -1,5 +1,7 @@
 package com.clusterrr.hexeditorwatchface;
 
+import static kotlin.jvm.internal.Reflection.createKotlinClass;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -17,10 +19,29 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.health.connect.HealthConnectException;
+import android.health.connect.ReadRecordsResponse;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Message;
 
+import androidx.annotation.NonNull;
+import androidx.health.services.client.HealthServices;
+import androidx.health.services.client.HealthServicesClient;
+import androidx.health.services.client.PassiveListenerCallback;
+import androidx.health.services.client.PassiveMonitoringClient;
+import androidx.health.services.client.data.DataPoint;
+import androidx.health.services.client.data.DataPointContainer;
+import androidx.health.services.client.data.DataType;
+import androidx.health.services.client.data.DeltaDataType;
+import androidx.health.services.client.data.ExerciseType;
+import androidx.health.services.client.data.IntervalDataPoint;
+import androidx.health.services.client.data.PassiveListenerConfig;
+import androidx.health.services.client.data.PassiveMonitoringCapabilities;
+import androidx.health.services.client.data.UserActivityInfo;
+import androidx.health.services.client.data.UserActivityState;
+
+import android.os.SystemClock;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
@@ -28,9 +49,16 @@ import android.view.SurfaceHolder;
 
 import androidx.core.content.ContextCompat;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.lang.ref.WeakReference;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -76,7 +104,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements SensorEventListener {
+    private class Engine extends CanvasWatchFaceService.Engine implements SensorEventListener, PassiveListenerCallback {
         /* Handler to update the time once a second in interactive mode. */
         private final Handler mUpdateTimeHandler = new EngineHandler(this);
         private Calendar mCalendar;
@@ -108,7 +136,7 @@ public class HexWatchFace extends CanvasWatchFaceService {
         private int mTouchCount = 0;
         private SensorManager mSensorManager = null;
         private Sensor mHeartRateSensor = null;
-        private Sensor mStepCountSensor = null;
+        private PassiveMonitoringClient mStepPassiveMonitoringClient = null;
         private int mBackgroundMinX = 0;
         private int mBackgroundMinY = 0;
         private int mBackgroundMaxX = 0;
@@ -144,10 +172,6 @@ public class HexWatchFace extends CanvasWatchFaceService {
             mLegendHeartRate = BitmapFactory.decodeResource(res, R.drawable.legend_heart_rate);
             mNumbers = new HexNumbers(res);
             mSensorManager = ((SensorManager)getSystemService(SENSOR_SERVICE));
-
-            if (mCalendar.get(Calendar.DAY_OF_MONTH) == prefs.getInt(getString(R.string.pref_steps_day), 0)) {
-                mStepCounter = prefs.getInt(getString(R.string.pref_today_step_last), 0);
-            }
         }
 
         @Override
@@ -634,20 +658,29 @@ public class HexWatchFace extends CanvasWatchFaceService {
                     /* && !mAmbient && isVisible() */)
             {
                 // Enable step sensor if need
-                if (mStepCountSensor == null) {
-                    mStepCountSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-                    mSensorManager.registerListener(this, mStepCountSensor, SensorManager.SENSOR_DELAY_NORMAL);
+                if (mStepPassiveMonitoringClient == null) {
+                    HealthServicesClient healthServicesClient = HealthServices.getClient(getApplicationContext());
+                    mStepPassiveMonitoringClient = healthServicesClient.getPassiveMonitoringClient();
+
+                    Set<DataType<?,?>> dataTypes = new HashSet<>();
+                    dataTypes.add(DataType.STEPS_DAILY);
+                    PassiveListenerConfig passiveListenerConfig = PassiveListenerConfig.builder()
+                            //.setShouldUserActivityInfoBeRequested(true)
+                            .setDataTypes(dataTypes)
+                            .build();
+                    mStepPassiveMonitoringClient.setPassiveListenerCallback(passiveListenerConfig, this);
                     Log.i(TAG, "Step sensor enabled");
                 }
-            } else if (mStepCountSensor != null)
+            } else if (mStepPassiveMonitoringClient != null)
             {
                 // Disable step sensor
-                mSensorManager.unregisterListener(this, mStepCountSensor);
-                mStepCountSensor = null;
+                mStepPassiveMonitoringClient.clearPassiveListenerCallbackAsync();
+                mStepPassiveMonitoringClient = null;
                 Log.i(TAG, "Step sensor Disabled");
             }
         }
 
+        // Heart rate receiver
         @Override
         public void onSensorChanged(SensorEvent event) {
             //Log.d(TAG, "New sensor data: " + event.sensor.getType());
@@ -659,57 +692,59 @@ public class HexWatchFace extends CanvasWatchFaceService {
                         //Log.d(TAG, "Heart rate: " + mHeartRate);
                     }
                     break;
-                case Sensor.TYPE_STEP_COUNTER:
-                    SharedPreferences prefs = getApplicationContext().getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
-                    int steps;
-                    try {
-                        steps = (int) event.values[0];
-                    }
-                    catch (Exception ex) {
-                        steps = 0;
-                    }
-                    // It's a bit tricky because we can get steps since reboot only
-                    int todayStepStart = prefs.getInt(getString(R.string.pref_today_step_start), 0);
-                    if (steps >= 0 && (
-                            // Check if it's new day
-                            (mCalendar.get(Calendar.DAY_OF_MONTH) != prefs.getInt(getString(R.string.pref_steps_day), 0))
-                                    || (steps < todayStepStart)) // or value reset
-                    ) {
-                        // Store new day values
-                        prefs.edit()
-                                .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
-                                .putInt(getString(R.string.pref_today_step_start), steps)
-                                .apply();
-                        steps = 0;
-                    } else {
-                        // Calculate today steps
-                        steps = Math.max(steps - todayStepStart, 0);
-                        int last = prefs.getInt(getString(R.string.pref_today_step_last), 0);
-                        if (steps < last) {
-                            // Reboot?
-                            Log.d(TAG, "Reboot? Recalculate todayStepStart from " + todayStepStart + " to todayStepStart-"+last);
-                            todayStepStart -= last;
-                            prefs.edit()
-                                    .putInt(getString(R.string.pref_steps_day), mCalendar.get(Calendar.DAY_OF_MONTH))
-                                    .putInt(getString(R.string.pref_today_step_start), steps)
-                                    .apply();
-                            steps = Math.max(steps - todayStepStart, 0);
-                        }
-                    }
-                    if (steps / STEPS_SAVE_INTERVAL != mStepCounter / STEPS_SAVE_INTERVAL) {
-                        // Save last value every 10 steps
-                        prefs.edit()
-                                .putInt(getString(R.string.pref_today_step_last), steps)
-                                .apply();
-                    }
-                    mStepCounter = steps;
-                    Log.d(TAG, "Steps: " + steps + ", today: " + mStepCounter);
-                    break;
             }
         }
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int i) {
+            // unused
+        }
+
+        // Steps receiver
+        @Override
+        public void onNewDataPointsReceived(@NonNull DataPointContainer dataPoints) {
+            PassiveListenerCallback.super.onNewDataPointsReceived(dataPoints);
+
+            List<IntervalDataPoint<Long>> dps = dataPoints.getData(DataType.STEPS_DAILY);
+            Instant bootInstant = Instant.ofEpochMilli(System.currentTimeMillis() - SystemClock.elapsedRealtime());
+
+            long ts = 0;
+            long steps = 0;
+
+            if (!dps.isEmpty()) {
+                for (IntervalDataPoint<Long> dp : dps)
+                {
+                    Instant endTime = dp.getEndInstant(bootInstant);
+                    if (endTime.toEpochMilli() > ts)
+                    {
+                        ts = endTime.toEpochMilli();
+                        steps = dp.getValue();
+                    }
+                }
+            }
+
+            mStepCounter = (int)steps;
+            Log.d(TAG, "Today steps: " + mStepCounter);
+        }
+
+        @Override
+        public void onRegistered() {
+            PassiveListenerCallback.super.onRegistered();
+            Log.d(TAG, "Step counter sensor registered");
+        }
+
+        @Override
+        public void onPermissionLost() {
+            PassiveListenerCallback.super.onPermissionLost();
+            mStepPassiveMonitoringClient = null;
+            Log.e(TAG, "Step counter permission lost");
+        }
+
+        @Override
+        public void onRegistrationFailed(@NonNull Throwable throwable) {
+            PassiveListenerCallback.super.onRegistrationFailed(throwable);
+            mStepPassiveMonitoringClient = null;
+            Log.d(TAG, "Step counter sensor unregistered");
         }
     }
 }
