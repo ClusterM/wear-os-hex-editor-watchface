@@ -26,8 +26,14 @@ You can always see the hint by triple tap on the screen.
 ## Download on Google Play
 https://play.google.com/store/apps/details?id=com.clusterrr.hexeditorwatchface
 
+## Donate
+* [Buy Me A Coffee](https://www.buymeacoffee.com/cluster)
+* [Donation Alerts](https://www.donationalerts.com/r/clustermeerkat)
+* [Boosty](https://boosty.to/cluster)
+* BTC: 1MBYsGczwCypXhMBocoDQWxx7KZT2iiwzJ
+* PayPal is not available in Armenia :(
+
 ## Contacts
-* My site (Russian): https://cluster.wtf
+* My site (Russian): https://clusterrr.com
 * Email: cluster@cluster.wtf
 * Telegram: https://t.me/Cluster_M
-* Donations: https://www.donationalerts.com/r/clustermeerkat
